@@ -9,7 +9,7 @@ Single-file HTML, siap deploy ke Vercel/Netlify.
 
 | Pengguna | Role | PIN |
 |----------|------|-----|
-| Budi (Owner) | Owner | `1234` |
+| furqan (Owner) | Owner | `1234` |
 | Sari (Kasir) | Kasir | `5678` |
 
 ---
