@@ -1367,7 +1367,11 @@ function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('mob-overlay').classList.remove('open');
 }
-
+// ================= SUPABASE INIT =================
+const supabase = window.supabase.createClient(
+  "https://ashhcapfjxnjwqvsyjhb.supabase.co",
+  "sb_publishable_sgTTjV4t2a6mbShJco7mfA_nsLR970c"
+);
 // ================================================================
 // INIT
 // ================================================================
@@ -1375,6 +1379,7 @@ window.addEventListener('load',()=>{
   renderUserList();
   document.getElementById('lap-date') && (document.getElementById('lap-date').value = todayISO());
 });
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </script>
 </body>
 </html>
