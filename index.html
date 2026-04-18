@@ -282,6 +282,16 @@ select.fi{appearance:none;cursor:pointer}
 </head>
 <body>
 
+<!-- WAKEUP OVERLAY -->
+<div id="wakeup-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px;text-align:center">
+  <div style="font-size:3rem">☕</div>
+  <div style="font-family:'Sora',sans-serif;font-size:1.1rem;font-weight:700">Server lagi pemanasan...</div>
+  <div style="font-size:.85rem;color:var(--muted);max-width:300px;line-height:1.7">Database sedang bangun dari tidur. Biasanya butuh <strong style="color:var(--text)">1–2 menit</strong>. Coba lagi sebentar ya!</div>
+  <div style="width:48px;height:48px;border:3px solid var(--border2);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;margin:4px 0"></div>
+  <button class="btn btn-amber btn-lg" onclick="retryLoad()">🔄 Coba Lagi</button>
+  <a href="https://wa.me/6281245400031" target="_blank" style="font-size:.78rem;color:var(--muted);text-decoration:none">Masalah terus? Hubungi kami →</a>
+</div>
+
 <!-- LOADING -->
 <div id="loading-overlay" class="loading-overlay">
   <div class="loader"></div>
@@ -427,6 +437,9 @@ select.fi{appearance:none;cursor:pointer}
     <!-- POS -->
     <div id="page-pos" class="page on">
       <div class="pos-left">
+        <div style="margin-bottom:10px">
+          <input class="fi" id="pos-search" placeholder="🔍 Cari menu..." oninput="renderPOS()" style="font-size:.84rem">
+        </div>
         <div class="pos-cats" id="pos-cats"></div>
         <div class="pos-grid" id="pos-grid"></div>
       </div>
@@ -650,8 +663,20 @@ select.fi{appearance:none;cursor:pointer}
   <div class="modal" style="max-width:340px">
     <div class="modal-hd"><div class="modal-title">✅ Transaksi Berhasil</div><button class="modal-x" onclick="closeModal('struk-modal')">×</button></div>
     <div id="struk-content"></div>
-    <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('struk-modal')">Tutup</button><button class="btn btn-amber" onclick="window.print()">🖨️ Cetak</button></div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('struk-modal')">Tutup</button>
+      <button class="btn btn-ghost" onclick="showAntrian()">🔢 Antrian</button>
+      <button class="btn btn-amber" onclick="window.print()">🖨️ Cetak</button>
+    </div>
   </div>
+</div>
+
+<!-- LAYAR ANTRIAN -->
+<div id="antrian-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9990;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer" onclick="closeAntrian()">
+  <div style="font-size:1rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;font-family:'Sora',sans-serif;font-weight:700">Nomor Antrian</div>
+  <div id="antrian-number" style="font-family:'Sora',sans-serif;font-size:clamp(6rem,25vw,14rem);font-weight:800;color:var(--amber);line-height:1">—</div>
+  <div id="antrian-items" style="font-size:clamp(.9rem,2.5vw,1.3rem);color:var(--muted2);margin-top:8px;text-align:center;max-width:600px;line-height:1.8"></div>
+  <div style="font-size:.75rem;color:var(--muted);margin-top:24px;letter-spacing:1px">Ketuk layar untuk tutup</div>
 </div>
 
 <script>
@@ -985,10 +1010,12 @@ function goPage(name, btn) {
 let posActiveCat='Semua';
 
 function renderPOS() {
+  const q=(document.getElementById('pos-search')?.value||'').toLowerCase().trim();
   const aktif=S.menu.filter(m=>m.status==='aktif');
   const cats=['Semua',...new Set(aktif.map(m=>m.kategori))];
   document.getElementById('pos-cats').innerHTML=cats.map(c=>`<button class="pos-cat ${c===posActiveCat?'on':''}" onclick="setPOSCat('${c}')">${c}</button>`).join('');
-  const items=aktif.filter(m=>posActiveCat==='Semua'||m.kategori===posActiveCat);
+  let items=aktif.filter(m=>posActiveCat==='Semua'||m.kategori===posActiveCat);
+  if(q) items=items.filter(m=>m.nama.toLowerCase().includes(q));
   document.getElementById('pos-grid').innerHTML=items.map(m=>{
     const ok=canMake(m.id);
     return `<div class="m-tile ${ok?'':'oos'}" onclick="addToCart('${m.id}')">
@@ -1140,6 +1167,7 @@ async function processCheckout() {
 }
 
 function showStruk(tx) {
+  lastAntrianData = {nomorTrx: tx.nomorTrx, items: tx.items};
   document.getElementById('struk-content').innerHTML=`
     <div class="struk">
       <div class="struk-logo">${S.toko.logo_emoji||'☕'} ${S.toko.nama}</div>
@@ -1542,6 +1570,28 @@ function exportCSV() {
 }
 
 // ================================================================
+// ANTRIAN
+// ================================================================
+let lastAntrianData = null;
+
+function showAntrian() {
+  if (!lastAntrianData) return;
+  const {nomorTrx, items} = lastAntrianData;
+  const num = nomorTrx ? nomorTrx.split('-').pop() : '—';
+  document.getElementById('antrian-number').textContent = num;
+  document.getElementById('antrian-items').textContent = items.map(i=>i.nama+(i.qty>1?' ×'+i.qty:'')).join(' · ');
+  const el = document.getElementById('antrian-screen');
+  el.style.display = 'flex';
+  // Fullscreen kalau bisa
+  if (el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+}
+
+function closeAntrian() {
+  document.getElementById('antrian-screen').style.display = 'none';
+  if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+}
+
+// ================================================================
 // SIDEBAR MOBILE
 // ================================================================
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('mob-ov').classList.toggle('open');}
@@ -1550,12 +1600,17 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('ope
 // ================================================================
 // INIT
 // ================================================================
-window.addEventListener('load', async ()=>{
+window.addEventListener('load', ()=>{ tryLoadApp(); });
+
+async function tryLoadApp(isRetry=false) {
   const tid = localStorage.getItem('kk_toko_id');
   if (tid) {
-    loading(true,'Memuat data...');
+    loading(true, isRetry ? 'Mencoba ulang...' : 'Memuat data...');
     try {
-      const {data,error} = await sb.from('toko').select('*').eq('id',tid).single();
+      const {data,error} = await Promise.race([
+        sb.from('toko').select('*').eq('id',tid).single(),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
+      ]);
       if (data && !error) {
         S.toko = data;
         await loadTokoData();
@@ -1566,12 +1621,24 @@ window.addEventListener('load', async ()=>{
         loading(false);
         showOnboarding();
       }
-    } catch(e) { loading(false); showOnboarding(); }
+    } catch(e) {
+      loading(false);
+      showWakeUp(tid);
+    }
   } else {
     loading(false);
     showOnboarding();
   }
-});
+}
+
+function showWakeUp(tid) {
+  document.getElementById('wakeup-overlay').style.display='flex';
+}
+
+function retryLoad() {
+  document.getElementById('wakeup-overlay').style.display='none';
+  tryLoadApp(true);
+}
 
 function confirmGantiToko() {
   if (!confirm('Yakin mau ganti toko? Perangkat ini akan kembali ke halaman setup.\n\nData toko lama tidak akan hilang.')) return;
