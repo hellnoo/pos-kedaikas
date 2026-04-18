@@ -291,61 +291,27 @@ select.fi{appearance:none;cursor:pointer}
 <!-- TOAST -->
 <div id="toast"></div>
 
-<!-- ===== LANDING ===== -->
-<div id="screen-landing" class="screen">
-  <nav class="land-nav">
-    <div class="land-logo">KedaiKas<span>UMKM Nusantara</span></div>
-    <div class="land-nav-btns">
-      <button class="btn btn-ghost" onclick="showAuth('login')">Masuk</button>
-      <button class="btn btn-amber" onclick="showAuth('daftar')">Daftar Gratis</button>
+<!-- ===== ONBOARDING ===== -->
+<div id="screen-onboarding" class="screen">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;flex-direction:column;gap:0">
+    <div style="width:100%;max-width:420px">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-family:'Sora',sans-serif;font-size:1.8rem;font-weight:800;color:var(--amber)">KedaiKas</div>
+        <div style="font-size:.7rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px">Kasir UMKM Nusantara</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:32px 28px;box-shadow:0 24px 80px rgba(0,0,0,.5)">
+        <div style="text-align:center;margin-bottom:22px">
+          <div style="font-size:2.4rem;margin-bottom:8px">👋</div>
+          <div style="font-family:'Sora',sans-serif;font-size:1.05rem;font-weight:700">Selamat datang!</div>
+          <div style="font-size:.8rem;color:var(--muted);margin-top:4px">Setup kedai kamu dalam 30 detik. Gratis, tanpa daftar.</div>
+        </div>
+        <div class="fg"><label class="fl">Nama Kedai / Toko</label><input class="fi" id="ob-nama" placeholder="Kedai Kopi Nusantara" autofocus></div>
+        <div class="fg"><label class="fl">Nama Kamu (Pemilik)</label><input class="fi" id="ob-owner" placeholder="Budi" onkeydown="if(event.key==='Enter')doOnboarding()"></div>
+        <div class="fg"><label class="fl">Alamat <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-alamat" placeholder="Jl. Merdeka No. 1"></div>
+        <div class="fg" style="margin-bottom:18px"><label class="fl">Telepon <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-telp" type="tel" placeholder="0812xxxxxxxx"></div>
+        <button class="btn btn-amber" style="width:100%;padding:13px;font-size:.95rem" onclick="doOnboarding()" id="ob-btn">🚀 Mulai Sekarang</button>
+      </div>
     </div>
-  </nav>
-  <div class="land-hero">
-    <h1>Kasir Digital untuk <span>UMKM</span> Indonesia</h1>
-    <p>Kelola transaksi, stok bahan, dan laporan keuangan kedai kamu dalam satu aplikasi. Gratis, mudah, dan bisa diakses dari mana saja.</p>
-    <div class="land-hero-btns">
-      <button class="btn btn-amber btn-lg" onclick="showAuth('daftar')">🚀 Mulai Gratis</button>
-      <button class="btn btn-ghost btn-lg" onclick="showAuth('login')">Sudah punya akun</button>
-    </div>
-  </div>
-  <div class="land-features">
-    <div class="feat-card"><div class="feat-ico">🛒</div><div class="feat-title">Kasir Cepat</div><div class="feat-desc">Input transaksi dengan mudah, Cash & QRIS, cetak struk otomatis.</div></div>
-    <div class="feat-card"><div class="feat-ico">📦</div><div class="feat-title">Stok Otomatis</div><div class="feat-desc">Stok bahan berkurang otomatis setiap transaksi sesuai resep.</div></div>
-    <div class="feat-card"><div class="feat-ico">📈</div><div class="feat-title">Laporan Lengkap</div><div class="feat-desc">Omzet, HPP, laba bersih — harian, mingguan, bulanan.</div></div>
-    <div class="feat-card"><div class="feat-ico">👥</div><div class="feat-title">Multi User</div><div class="feat-desc">Kasir login pakai PIN, owner punya akses penuh ke semua data.</div></div>
-    <div class="feat-card"><div class="feat-ico">☁️</div><div class="feat-title">Cloud & Realtime</div><div class="feat-desc">Data tersimpan online, akses dari HP atau laptop manapun.</div></div>
-    <div class="feat-card"><div class="feat-ico">🆓</div><div class="feat-title">Gratis Selamanya</div><div class="feat-desc">Tidak ada biaya langganan untuk UMKM kecil. Daftar sekarang!</div></div>
-  </div>
-</div>
-
-<!-- ===== AUTH ===== -->
-<div id="screen-auth" class="screen">
-  <div class="auth-box">
-    <div class="auth-logo">KedaiKas<small>Sistem Kasir UMKM</small></div>
-    <div class="auth-tabs">
-      <button class="auth-tab on" id="tab-login" onclick="authTab('login')">Masuk</button>
-      <button class="auth-tab" id="tab-daftar" onclick="authTab('daftar')">Daftar Toko</button>
-    </div>
-
-    <!-- LOGIN -->
-    <div id="auth-login">
-      <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="l-email" placeholder="owner@kedaimu.com"></div>
-      <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <button class="btn btn-amber" style="width:100%;padding:12px;font-size:.9rem;margin-top:4px" onclick="doLogin()" id="l-btn">Masuk ke Dashboard</button>
-      <p style="text-align:center;font-size:.78rem;color:var(--muted);margin-top:14px">Belum punya akun? <button class="btn-ghost" style="background:none;border:none;color:var(--amber);font-weight:600;cursor:pointer;font-size:.78rem" onclick="authTab('daftar')">Daftar toko gratis</button></p>
-    </div>
-
-    <!-- DAFTAR -->
-    <div id="auth-daftar" style="display:none">
-      <div class="fg"><label class="fl">Nama Toko/Kedai</label><input class="fi" type="text" id="d-nama" placeholder="Kedai Kopi Nusantara"></div>
-      <div class="fg"><label class="fl">Alamat</label><input class="fi" type="text" id="d-alamat" placeholder="Jl. Merdeka No. 1, Ternate"></div>
-      <div class="fg"><label class="fl">Email Owner</label><input class="fi" type="email" id="d-email" placeholder="owner@kedaimu.com"></div>
-      <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="d-pass" placeholder="Min. 6 karakter"></div>
-      <div class="fg"><label class="fl">Telepon</label><input class="fi" type="tel" id="d-telp" placeholder="0812xxxxxxxx"></div>
-      <button class="btn btn-amber" style="width:100%;padding:12px;font-size:.9rem;margin-top:4px" onclick="doDaftar()" id="d-btn">Daftar & Mulai Gratis</button>
-    </div>
-
-    <button style="background:none;border:none;color:var(--muted);font-size:.78rem;cursor:pointer;margin-top:16px;width:100%;text-align:center" onclick="showLanding()">← Kembali ke halaman utama</button>
   </div>
 </div>
 
@@ -369,7 +335,7 @@ select.fi{appearance:none;cursor:pointer}
       <button class="pin-key" onclick="pk('C')">C</button><button class="pin-key" onclick="pk('0')">0</button><button class="pin-key" onclick="pk('⌫')" style="font-size:.8rem">⌫</button>
     </div>
     <div class="pin-err" id="pin-err"></div>
-    <button class="pin-back" onclick="showAuth('login')">← Ganti akun owner</button>
+    <button class="pin-back" onclick="confirmGantiToko()">← Ganti toko</button>
   </div>
 </div>
 
@@ -552,14 +518,10 @@ select.fi{appearance:none;cursor:pointer}
           <div class="fg"><label class="fl">QRIS String / Nomor Rekening</label><input class="fi" id="set-qris" placeholder="00020101021126..."></div>
           <button class="btn btn-amber" onclick="saveSettingsQRIS()">💾 Simpan QRIS</button>
         </div>
-        <div class="set-section">
-          <div class="set-section-title">🔑 Ganti Password</div>
-          <div class="fg"><label class="fl">Password Lama</label><input class="fi" type="password" id="set-old-pass" placeholder="••••••••"></div>
-          <div class="g2">
-            <div class="fg"><label class="fl">Password Baru</label><input class="fi" type="password" id="set-new-pass" placeholder="Min. 6 karakter"></div>
-            <div class="fg"><label class="fl">Konfirmasi</label><input class="fi" type="password" id="set-conf-pass" placeholder="Ulangi password baru"></div>
-          </div>
-          <button class="btn btn-ghost" onclick="changePassword()">🔐 Ganti Password</button>
+        <div class="set-section" style="border-color:rgba(239,68,68,.25)">
+          <div class="set-section-title" style="color:var(--red)">⚠️ Ganti Toko</div>
+          <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Pindah ke toko lain atau reset perangkat ini. Data toko lama tidak hilang, tapi kamu perlu setup ulang di perangkat ini.</p>
+          <button class="btn btn-red" onclick="confirmGantiToko()">🔄 Ganti / Reset Toko</button>
         </div>
       </div>
     </div>
@@ -702,58 +664,34 @@ function hashPass(p) { return btoa(unescape(encodeURIComponent(p))); }
 function checkPass(p, h) { return hashPass(p) === h; }
 
 // ================================================================
-// LANDING & AUTH
+// ONBOARDING
 // ================================================================
-function showLanding() { showScreen('landing'); }
-function showAuth(tab) { showScreen('auth'); authTab(tab); }
-
-function authTab(t) {
-  document.getElementById('auth-login').style.display = t==='login'?'block':'none';
-  document.getElementById('auth-daftar').style.display = t==='daftar'?'block':'none';
-  document.getElementById('tab-login').classList.toggle('on', t==='login');
-  document.getElementById('tab-daftar').classList.toggle('on', t==='daftar');
+function showOnboarding() {
+  showScreen('onboarding');
+  setTimeout(()=>document.getElementById('ob-nama')?.focus(),100);
 }
 
-async function doLogin() {
-  const email = document.getElementById('l-email').value.trim();
-  const pass = document.getElementById('l-pass').value;
-  if (!email||!pass) { toast('Email dan password wajib!','error'); return; }
-  loading(true,'Masuk...');
+async function doOnboarding() {
+  const nama = document.getElementById('ob-nama').value.trim();
+  const owner = document.getElementById('ob-owner').value.trim();
+  const alamat = document.getElementById('ob-alamat').value.trim();
+  const telp = document.getElementById('ob-telp').value.trim();
+  if (!nama) { toast('Nama toko wajib diisi!','error'); return; }
+  if (!owner) { toast('Nama kamu wajib diisi!','error'); return; }
+  const btn = document.getElementById('ob-btn');
+  btn.disabled = true; btn.textContent = 'Menyiapkan...';
+  loading(true,'Menyiapkan kedai kamu...');
   try {
-    const {data,error} = await sb.from('toko').select('*').eq('email',email).single();
-    if (error||!data) { toast('Email tidak ditemukan!','error'); loading(false); return; }
-    if (!checkPass(pass, data.password_hash)) { toast('Password salah!','error'); loading(false); return; }
-    S.toko = data;
-    await loadTokoData();
-    loading(false);
-    showPinScreen();
-  } catch(e) { toast('Error: '+e.message,'error'); loading(false); }
-}
-
-async function doDaftar() {
-  const nama = document.getElementById('d-nama').value.trim();
-  const email = document.getElementById('d-email').value.trim();
-  const pass = document.getElementById('d-pass').value;
-  const alamat = document.getElementById('d-alamat').value.trim();
-  const telp = document.getElementById('d-telp').value.trim();
-  if (!nama||!email||!pass) { toast('Nama, email, password wajib!','error'); return; }
-  if (pass.length < 6) { toast('Password minimal 6 karakter!','error'); return; }
-  loading(true,'Mendaftarkan toko...');
-  try {
-    // Check email unique
-    const {data:exist} = await sb.from('toko').select('id').eq('email',email).single();
-    if (exist) { toast('Email sudah terdaftar!','error'); loading(false); return; }
-
-    // Insert toko
+    // Generate unique email agar tidak tabrakan di kolom unique
+    const fakeEmail = `toko_${Date.now()}_${Math.random().toString(36).slice(2,7)}@kedaikas.local`;
     const {data:toko,error} = await sb.from('toko').insert({
-      nama, email, password_hash:hashPass(pass), alamat, telepon:telp, logo_emoji:'☕'
+      nama, email:fakeEmail, password_hash:hashPass(nama+Date.now()),
+      alamat, telepon:telp, logo_emoji:'☕'
     }).select().single();
     if (error) throw error;
 
-    // Insert default owner pengguna
-    await sb.from('pengguna').insert({toko_id:toko.id, nama:'Owner ('+nama+')', role:'owner', pin:hashPass('1234')});
+    await sb.from('pengguna').insert({toko_id:toko.id, nama:owner, role:'owner', pin:hashPass('1234')});
 
-    // Insert sample menu
     const defaultMenu = [
       {toko_id:toko.id,nama:'Espresso',icon:'☕',kategori:'Kopi',harga:15000,hpp:7000,status:'aktif'},
       {toko_id:toko.id,nama:'Kopi Susu',icon:'🥛',kategori:'Kopi',harga:20000,hpp:9000,status:'aktif'},
@@ -762,12 +700,18 @@ async function doDaftar() {
     ];
     await sb.from('menu').insert(defaultMenu);
 
+    localStorage.setItem('kk_toko_id', toko.id);
     S.toko = toko;
     await loadTokoData();
     loading(false);
     toast('🎉 Toko berhasil didaftarkan!','success');
     showPinScreen();
-  } catch(e) { toast('Error: '+e.message,'error'); loading(false); }
+  } catch(e) {
+    toast('Error: '+e.message,'error');
+    loading(false);
+    const btn=document.getElementById('ob-btn');
+    if(btn){btn.disabled=false;btn.textContent='🚀 Mulai Sekarang';}
+  }
 }
 
 // ================================================================
@@ -1402,9 +1346,6 @@ function loadSettingsPage() {
   document.getElementById('set-telp').value=S.toko.telepon||'';
   document.getElementById('set-logo').value=S.toko.logo_emoji||'☕';
   document.getElementById('set-qris').value=localStorage.getItem('qris_'+S.toko.id)||'';
-  document.getElementById('set-old-pass').value='';
-  document.getElementById('set-new-pass').value='';
-  document.getElementById('set-conf-pass').value='';
 }
 
 async function saveSettingsToko() {
@@ -1482,10 +1423,35 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('ope
 // ================================================================
 // INIT
 // ================================================================
-window.addEventListener('load',()=>{
-  loading(false);
-  showScreen('landing');
+window.addEventListener('load', async ()=>{
+  const tid = localStorage.getItem('kk_toko_id');
+  if (tid) {
+    loading(true,'Memuat data...');
+    try {
+      const {data,error} = await sb.from('toko').select('*').eq('id',tid).single();
+      if (data && !error) {
+        S.toko = data;
+        await loadTokoData();
+        loading(false);
+        showPinScreen();
+      } else {
+        localStorage.removeItem('kk_toko_id');
+        loading(false);
+        showOnboarding();
+      }
+    } catch(e) { loading(false); showOnboarding(); }
+  } else {
+    loading(false);
+    showOnboarding();
+  }
 });
+
+function confirmGantiToko() {
+  if (!confirm('Yakin mau ganti toko? Perangkat ini akan kembali ke halaman setup.\n\nData toko lama tidak akan hilang.')) return;
+  localStorage.removeItem('kk_toko_id');
+  S.toko = null; S.currentUser = null; S.cart = [];
+  showOnboarding();
+}
 </script>
 </body>
 </html>
