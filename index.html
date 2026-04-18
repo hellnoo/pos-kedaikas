@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 :root {
   --bg:#0f1117;--bg2:#181b23;--bg3:#1e2130;--sidebar:#13151e;
@@ -258,6 +259,25 @@ select.fi{appearance:none;cursor:pointer}
 @media(max-width:768px){.hamburger{display:block}}
 .mob-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:699;display:none}
 .mob-overlay.open{display:block}
+
+/* DISKON */
+.diskon-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.diskon-row .fl{margin:0;flex-shrink:0}
+.dk-wrap{display:flex;flex:1;border:1.5px solid var(--border);border-radius:var(--rs);overflow:hidden;transition:border-color .15s}
+.dk-wrap:focus-within{border-color:var(--amber)}
+.dk-type{padding:4px 9px;background:var(--bg3);border:none;border-right:1px solid var(--border);color:var(--amber);font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background .15s}
+.dk-type:hover{background:var(--amber-p)}
+.dk-input{width:100%;padding:5px 9px;background:transparent;border:none;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.83rem;outline:none}
+.cart-disc{display:flex;justify-content:space-between;font-size:.76rem;color:var(--red);margin-bottom:4px}
+
+/* QRIS QR */
+.qris-box{text-align:center;padding:10px 0 6px}
+.qris-box canvas{border-radius:8px;background:#fff;padding:6px}
+.qris-hint{font-size:.72rem;color:var(--muted);margin-top:6px}
+
+/* SETTINGS */
+.set-section{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.set-section-title{font-family:'Sora',sans-serif;font-size:.82rem;font-weight:700;margin-bottom:12px;color:var(--amber);display:flex;align-items:center;gap:6px}
 </style>
 </head>
 <body>
@@ -372,6 +392,7 @@ select.fi{appearance:none;cursor:pointer}
       <button class="sb-btn" data-p="stok" onclick="goPage('stok',this)" id="nav-stok"><span class="ic">📦</span> Stok Bahan</button>
       <button class="sb-btn" data-p="resep" onclick="goPage('resep',this)" id="nav-resep"><span class="ic">📋</span> Resep</button>
       <button class="sb-btn" data-p="pengguna" onclick="goPage('pengguna',this)" id="nav-pg"><span class="ic">👥</span> Pengguna</button>
+      <button class="sb-btn" data-p="settings" onclick="goPage('settings',this)" id="nav-set"><span class="ic">⚙️</span> Pengaturan</button>
     </nav>
     <div class="sb-foot"><button class="sb-out" onclick="logout()">🚪 Logout</button></div>
   </aside>
@@ -399,6 +420,14 @@ select.fi{appearance:none;cursor:pointer}
         <div class="cart-body" id="cart-body"><div class="empty"><div class="empty-ico">🛒</div><p style="font-size:.8rem">Belum ada item</p></div></div>
         <div class="cart-ft">
           <div class="cart-sub"><span>Subtotal</span><span id="c-sub">Rp 0</span></div>
+          <div class="diskon-row">
+            <span class="fl">Diskon</span>
+            <div class="dk-wrap">
+              <button class="dk-type" id="dk-type" onclick="toggleDiskonType()">Rp</button>
+              <input class="dk-input" type="number" id="dk-val" placeholder="0" min="0" oninput="calcChange()">
+            </div>
+          </div>
+          <div class="cart-disc" id="c-disc" style="display:none"><span>Potongan</span><span id="c-disc-val">- Rp 0</span></div>
           <div class="cart-tot"><span>Total</span><span id="c-tot">Rp 0</span></div>
           <div class="pay-btns">
             <button class="pay-btn on" id="pb-cash" onclick="setPayMethod('cash')">💵 Cash</button>
@@ -409,6 +438,10 @@ select.fi{appearance:none;cursor:pointer}
             <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-top:5px;color:var(--muted)">
               <span>Kembalian</span><span id="change-disp" style="color:var(--green);font-weight:700">Rp 0</span>
             </div>
+          </div>
+          <div class="qris-box" id="qris-wrap" style="display:none">
+            <canvas id="qris-canvas"></canvas>
+            <p class="qris-hint" id="qris-hint"></p>
           </div>
           <button class="co-btn" id="co-btn" onclick="processCheckout()" disabled>Proses Bayar</button>
         </div>
@@ -438,9 +471,10 @@ select.fi{appearance:none;cursor:pointer}
           <button class="lap-tab" onclick="lapTab('mingguan',this)">Mingguan</button>
           <button class="lap-tab" onclick="lapTab('bulanan',this)">Bulanan</button>
         </div>
-        <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap">
+        <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <input class="fi" type="date" id="lap-date" style="width:auto" onchange="renderLaporan()">
           <input class="fi" type="month" id="lap-month" style="width:auto;display:none" onchange="renderLaporan()">
+          <button class="btn btn-ghost" onclick="exportCSV()" style="margin-left:auto">⬇️ Export CSV</button>
         </div>
         <div class="g4" style="margin-bottom:16px" id="lap-stats"></div>
         <div class="g2" style="margin-bottom:14px">
@@ -499,6 +533,37 @@ select.fi{appearance:none;cursor:pointer}
       </div>
     </div>
 
+    <!-- SETTINGS -->
+    <div id="page-settings" class="page" style="display:none">
+      <div class="content" style="max-width:600px">
+        <div class="set-section">
+          <div class="set-section-title">🏪 Informasi Toko</div>
+          <div class="g2">
+            <div class="fg"><label class="fl">Nama Toko</label><input class="fi" id="set-nama" placeholder="Kedai Kopi Nusantara"></div>
+            <div class="fg"><label class="fl">Logo Emoji</label><input class="fi" id="set-logo" placeholder="☕" maxlength="4"></div>
+          </div>
+          <div class="fg"><label class="fl">Alamat</label><input class="fi" id="set-alamat" placeholder="Jl. Merdeka No. 1"></div>
+          <div class="fg"><label class="fl">Telepon</label><input class="fi" id="set-telp" placeholder="0812xxxxxxxx"></div>
+          <button class="btn btn-amber" onclick="saveSettingsToko()">💾 Simpan Informasi</button>
+        </div>
+        <div class="set-section">
+          <div class="set-section-title">📱 QRIS Pembayaran</div>
+          <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Masukkan kode/string QRIS dari bank atau penyedia pembayaran kamu. QR code akan ditampilkan saat kasir pilih QRIS.</p>
+          <div class="fg"><label class="fl">QRIS String / Nomor Rekening</label><input class="fi" id="set-qris" placeholder="00020101021126..."></div>
+          <button class="btn btn-amber" onclick="saveSettingsQRIS()">💾 Simpan QRIS</button>
+        </div>
+        <div class="set-section">
+          <div class="set-section-title">🔑 Ganti Password</div>
+          <div class="fg"><label class="fl">Password Lama</label><input class="fi" type="password" id="set-old-pass" placeholder="••••••••"></div>
+          <div class="g2">
+            <div class="fg"><label class="fl">Password Baru</label><input class="fi" type="password" id="set-new-pass" placeholder="Min. 6 karakter"></div>
+            <div class="fg"><label class="fl">Konfirmasi</label><input class="fi" type="password" id="set-conf-pass" placeholder="Ulangi password baru"></div>
+          </div>
+          <button class="btn btn-ghost" onclick="changePassword()">🔐 Ganti Password</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -511,7 +576,7 @@ select.fi{appearance:none;cursor:pointer}
       <div class="fg"><label class="fl">Icon/Emoji</label><input class="fi" id="mm-icon" placeholder="☕" maxlength="4"></div>
     </div>
     <div class="g2">
-      <div class="fg"><label class="fl">Kategori</label><select class="fi" id="mm-cat"><option>Kopi</option><option>Non-Kopi</option><option>Makanan</option><option>Minuman</option><option>Lainnya</option></select></div>
+      <div class="fg"><label class="fl">Kategori</label><input class="fi" id="mm-cat" list="mm-cat-list" placeholder="Kopi"><datalist id="mm-cat-list"></datalist></div>
       <div class="fg"><label class="fl">Status</label><select class="fi" id="mm-status"><option value="aktif">Aktif</option><option value="nonaktif">Non-Aktif</option></select></div>
     </div>
     <div class="g2">
@@ -601,6 +666,7 @@ let S = {
   payMethod: 'cash',
   lapPeriod: 'harian',
   editResepMenuId: null,
+  diskonType: 'nominal', // 'nominal' | 'persen'
 };
 
 // ================================================================
@@ -685,7 +751,7 @@ async function doDaftar() {
     if (error) throw error;
 
     // Insert default owner pengguna
-    await sb.from('pengguna').insert({toko_id:toko.id, nama:'Owner ('+nama+')', role:'owner', pin:'1234'});
+    await sb.from('pengguna').insert({toko_id:toko.id, nama:'Owner ('+nama+')', role:'owner', pin:hashPass('1234')});
 
     // Insert sample menu
     const defaultMenu = [
@@ -709,18 +775,22 @@ async function doDaftar() {
 // ================================================================
 async function loadTokoData() {
   const tid = S.toko.id;
-  const [pg, mn, bh, rs, tx] = await Promise.all([
+  const [pg, mn, bh, tx] = await Promise.all([
     sb.from('pengguna').select('*').eq('toko_id',tid),
     sb.from('menu').select('*').eq('toko_id',tid).order('created_at'),
     sb.from('bahan').select('*').eq('toko_id',tid).order('nama'),
-    sb.from('resep').select('*'),
-    sb.from('transaksi').select('*').eq('toko_id',tid).order('created_at',{ascending:false}).limit(200),
+    sb.from('transaksi').select('*').eq('toko_id',tid).order('created_at',{ascending:false}).limit(1000),
   ]);
   S.pengguna = pg.data||[];
   S.menu = mn.data||[];
   S.bahan = bh.data||[];
-  S.resep = rs.data||[];
   S.transaksi = tx.data||[];
+  // Fetch resep filtered by this toko's menu IDs only (security fix)
+  const menuIds = S.menu.map(m=>m.id);
+  if(menuIds.length) {
+    const {data:rs} = await sb.from('resep').select('*').in('menu_id', menuIds);
+    S.resep = rs||[];
+  } else { S.resep = []; }
 }
 
 // ================================================================
@@ -764,7 +834,16 @@ function updatePinDots() {
 }
 
 function checkPin() {
-  if (selectedPinUser.pin===pinInput) {
+  const plain = selectedPinUser.pin === pinInput;
+  const hashed = selectedPinUser.pin === hashPass(pinInput);
+  if (plain || hashed) {
+    if (plain) { // migrate plaintext PIN to hashed
+      const h = hashPass(pinInput);
+      sb.from('pengguna').update({pin:h}).eq('id',selectedPinUser.id);
+      const u = S.pengguna.find(x=>x.id===selectedPinUser.id);
+      if(u) u.pin = h;
+      selectedPinUser.pin = h;
+    }
     S.currentUser = selectedPinUser;
     initApp();
   } else {
@@ -785,7 +864,7 @@ function initApp() {
   document.getElementById('sb-urole').textContent = u.role==='owner'?'👑 Owner':'🧾 Kasir';
   document.getElementById('sb-av').textContent = u.nama[0].toUpperCase();
 
-  const ownerOnly=['nav-owner-sec','nav-db','nav-lap','nav-menu','nav-stok','nav-resep','nav-pg'];
+  const ownerOnly=['nav-owner-sec','nav-db','nav-lap','nav-menu','nav-stok','nav-resep','nav-pg','nav-set'];
   ownerOnly.forEach(id=>document.getElementById(id).style.display=u.role==='owner'?'':'none');
 
   showScreen('app');
@@ -817,7 +896,7 @@ function goPage(name, btn) {
   el.style.display=name==='pos'?'flex':'block';
   el.classList.add('on');
   if(btn) btn.classList.add('on');
-  const titles={pos:'Kasir / POS',dashboard:'Dashboard',laporan:'Laporan',menu:'Kelola Menu',stok:'Stok Bahan',resep:'Resep Menu',pengguna:'Pengguna'};
+  const titles={pos:'Kasir / POS',dashboard:'Dashboard',laporan:'Laporan',menu:'Kelola Menu',stok:'Stok Bahan',resep:'Resep Menu',pengguna:'Pengguna',settings:'Pengaturan Toko'};
   document.getElementById('topbar-title').textContent=titles[name]||name;
   if(name==='dashboard') renderDashboard();
   if(name==='laporan'){document.getElementById('lap-date').value=todayISO();renderLaporan();}
@@ -825,6 +904,7 @@ function goPage(name, btn) {
   if(name==='stok') renderStokPage();
   if(name==='resep') renderResepPage();
   if(name==='pengguna') renderUserPage();
+  if(name==='settings') loadSettingsPage();
   closeSidebar();
 }
 
@@ -868,7 +948,11 @@ function removeFromCart(menuId) {
   if(i>=0){S.cart[i].qty--;if(S.cart[i].qty<=0)S.cart.splice(i,1);}
   renderCart();
 }
-function clearCart(){S.cart=[];renderCart();}
+function clearCart(){
+  S.cart=[];
+  document.getElementById('dk-val').value='';
+  renderCart();
+}
 
 function renderCart() {
   const body=document.getElementById('cart-body');
@@ -881,10 +965,15 @@ function renderCart() {
       <button class="ci-qb" onclick="addToCart('${i.menuId}')">+</button>
     </div>
   </div>`).join(''); }
-  const tot=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
-  document.getElementById('c-sub').textContent=fmt(tot);
-  document.getElementById('c-tot').textContent=fmt(tot);
+  const sub=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
+  document.getElementById('c-sub').textContent=fmt(sub);
   document.getElementById('co-btn').disabled=!S.cart.length;
+  calcChange();
+}
+
+function toggleDiskonType() {
+  S.diskonType = S.diskonType==='nominal' ? 'persen' : 'nominal';
+  document.getElementById('dk-type').textContent = S.diskonType==='nominal' ? 'Rp' : '%';
   calcChange();
 }
 
@@ -893,10 +982,36 @@ function setPayMethod(m) {
   document.getElementById('pb-cash').classList.toggle('on',m==='cash');
   document.getElementById('pb-qris').classList.toggle('on',m==='qris');
   document.getElementById('cash-wrap').style.display=m==='cash'?'block':'none';
+  document.getElementById('qris-wrap').style.display=m==='qris'?'block':'none';
+  if(m==='qris') renderQRIS();
+  calcChange();
+}
+
+function renderQRIS() {
+  const qrisData=localStorage.getItem('qris_'+S.toko.id);
+  const canvas=document.getElementById('qris-canvas');
+  const hint=document.getElementById('qris-hint');
+  if(qrisData && typeof QRCode!=='undefined') {
+    canvas.style.display='block';
+    QRCode.toCanvas(canvas,qrisData,{width:180,margin:1,color:{dark:'#111111',light:'#ffffff'}},err=>{
+      if(err){canvas.style.display='none';hint.textContent='Gagal render QR code.';}
+      else hint.textContent='Scan QR untuk membayar';
+    });
+  } else {
+    canvas.style.display='none';
+    hint.textContent=qrisData?'QR library belum siap.':'QRIS belum dikonfigurasi. Atur di menu Pengaturan.';
+  }
 }
 
 function calcChange() {
-  const tot=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
+  const sub=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
+  const dk=parseFloat(document.getElementById('dk-val').value)||0;
+  const disc=S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
+  const tot=Math.max(0,sub-disc);
+  const discEl=document.getElementById('c-disc');
+  if(disc>0){discEl.style.display='flex';document.getElementById('c-disc-val').textContent='- '+fmt(disc);}
+  else discEl.style.display='none';
+  document.getElementById('c-tot').textContent=fmt(tot);
   const cash=parseInt(document.getElementById('cash-in').value)||0;
   const chg=cash-tot;
   document.getElementById('change-disp').textContent=chg>=0?fmt(chg):'—';
@@ -906,7 +1021,10 @@ function calcChange() {
 
 async function processCheckout() {
   if(!S.cart.length) return;
-  const tot=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
+  const sub=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
+  const dk=parseFloat(document.getElementById('dk-val').value)||0;
+  const disc=S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
+  const tot=Math.max(0,sub-disc);
   const totHpp=S.cart.reduce((s,i)=>s+(i.hpp||0)*i.qty,0);
   const cash=parseInt(document.getElementById('cash-in').value)||tot;
   const chg=S.payMethod==='cash'?cash-tot:0;
@@ -940,9 +1058,11 @@ async function processCheckout() {
     S.transaksi.unshift(data);
 
     loading(false);
-    showStruk({...tx,id:data.id});
+    const nomorTrx=`TRX-${todayISO().replace(/-/g,'')}-${String(S.transaksi.filter(t=>t.tanggal===todayISO()).length).padStart(3,'0')}`;
+    showStruk({...tx,id:data.id,sub,disc,nomorTrx});
     S.cart=[];
     document.getElementById('cash-in').value='';
+    document.getElementById('dk-val').value='';
     renderCart(); renderPOS();
     toast('✅ Transaksi berhasil!','success');
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
@@ -955,9 +1075,12 @@ function showStruk(tx) {
       <div class="struk-sub">${S.toko.alamat||''}</div>
       <div class="struk-line"></div>
       <div class="struk-row"><span>${tx.tanggal}</span><span>${tx.waktu}</span></div>
+      <div class="struk-row"><span>No.</span><span style="font-weight:700">${tx.nomorTrx||'-'}</span></div>
       <div class="struk-row"><span>Kasir</span><span>${tx.kasir_nama}</span></div>
       <div class="struk-line"></div>
       ${tx.items.map(i=>`<div class="struk-row"><span>${i.nama} ×${i.qty}</span><span>${fmt(i.harga*i.qty)}</span></div>`).join('')}
+      <div class="struk-line"></div>
+      ${tx.sub!=null&&tx.disc>0?`<div class="struk-row"><span>Subtotal</span><span>${fmt(tx.sub)}</span></div><div class="struk-row"><span>Diskon</span><span>- ${fmt(tx.disc)}</span></div>`:''}
       <div class="struk-total"><span>Total</span><span>${fmt(tx.total)}</span></div>
       <div class="struk-row" style="margin-top:5px"><span>Bayar (${tx.pembayaran==='cash'?'Cash':'QRIS'})</span><span>${fmt(tx.uang_diterima)}</span></div>
       ${tx.pembayaran==='cash'?`<div class="struk-row"><span>Kembalian</span><span>${fmt(tx.kembalian)}</span></div>`:''}
@@ -1062,7 +1185,10 @@ function openMenuModal(id) {
   document.getElementById('mm-title').textContent=m?'Edit Menu':'Tambah Menu';
   document.getElementById('mm-name').value=m?.nama||'';
   document.getElementById('mm-icon').value=m?.icon||'';
-  document.getElementById('mm-cat').value=m?.kategori||'Kopi';
+  // populate datalist from existing categories
+  const cats=[...new Set(['Kopi','Non-Kopi','Makanan','Minuman','Lainnya',...S.menu.map(x=>x.kategori)])];
+  document.getElementById('mm-cat-list').innerHTML=cats.map(c=>`<option value="${c}">`).join('');
+  document.getElementById('mm-cat').value=m?.kategori||'';
   document.getElementById('mm-price').value=m?.harga||'';
   document.getElementById('mm-hpp').value=m?.hpp||'';
   document.getElementById('mm-status').value=m?.status||'aktif';
@@ -1133,9 +1259,10 @@ async function saveStok() {
 
 async function deleteBahan(id) {
   if(!confirm('Hapus bahan ini?'))return;
+  loading(true,'Menghapus...');
   await sb.from('bahan').delete().eq('id',id);
   S.bahan=S.bahan.filter(b=>b.id!==id);
-  renderStokPage();toast('Bahan dihapus','info');
+  loading(false);renderStokPage();toast('Bahan dihapus','info');
 }
 
 function openRestockModal() {
@@ -1249,7 +1376,7 @@ async function saveUser() {
   const nama=document.getElementById('um-name').value.trim();
   const pin=document.getElementById('um-pin').value.trim();
   if(!nama||pin.length!==4){toast('Nama wajib & PIN 4 digit!','error');return;}
-  const data={nama,role:document.getElementById('um-role').value,pin};
+  const data={nama,role:document.getElementById('um-role').value,pin:hashPass(pin)};
   const eid=document.getElementById('um-eid').value;
   loading(true,'Menyimpan...');
   try {
@@ -1264,6 +1391,86 @@ async function deleteUser(id) {
   await sb.from('pengguna').delete().eq('id',id);
   S.pengguna=S.pengguna.filter(u=>u.id!==id);
   renderUserPage();toast('Pengguna dihapus','info');
+}
+
+// ================================================================
+// SETTINGS
+// ================================================================
+function loadSettingsPage() {
+  document.getElementById('set-nama').value=S.toko.nama||'';
+  document.getElementById('set-alamat').value=S.toko.alamat||'';
+  document.getElementById('set-telp').value=S.toko.telepon||'';
+  document.getElementById('set-logo').value=S.toko.logo_emoji||'☕';
+  document.getElementById('set-qris').value=localStorage.getItem('qris_'+S.toko.id)||'';
+  document.getElementById('set-old-pass').value='';
+  document.getElementById('set-new-pass').value='';
+  document.getElementById('set-conf-pass').value='';
+}
+
+async function saveSettingsToko() {
+  const nama=document.getElementById('set-nama').value.trim();
+  const alamat=document.getElementById('set-alamat').value.trim();
+  const telp=document.getElementById('set-telp').value.trim();
+  const logo=document.getElementById('set-logo').value||'☕';
+  if(!nama){toast('Nama toko wajib!','error');return;}
+  loading(true,'Menyimpan...');
+  try {
+    await sb.from('toko').update({nama,alamat,telepon:telp,logo_emoji:logo}).eq('id',S.toko.id);
+    S.toko={...S.toko,nama,alamat,telepon:telp,logo_emoji:logo};
+    document.getElementById('sb-store-name').textContent=nama;
+    document.getElementById('sb-store-ico').textContent=logo;
+    loading(false);toast('Informasi toko disimpan!','success');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+}
+
+function saveSettingsQRIS() {
+  const qris=document.getElementById('set-qris').value.trim();
+  if(qris) localStorage.setItem('qris_'+S.toko.id,qris);
+  else localStorage.removeItem('qris_'+S.toko.id);
+  toast(qris?'QRIS disimpan!':'QRIS dihapus','success');
+}
+
+async function changePassword() {
+  const oldp=document.getElementById('set-old-pass').value;
+  const newp=document.getElementById('set-new-pass').value;
+  const conf=document.getElementById('set-conf-pass').value;
+  if(!oldp||!newp){toast('Isi semua field password!','error');return;}
+  if(newp.length<6){toast('Password baru minimal 6 karakter!','error');return;}
+  if(newp!==conf){toast('Konfirmasi password tidak cocok!','error');return;}
+  if(!checkPass(oldp,S.toko.password_hash)){toast('Password lama salah!','error');return;}
+  loading(true,'Menyimpan...');
+  try {
+    const h=hashPass(newp);
+    await sb.from('toko').update({password_hash:h}).eq('id',S.toko.id);
+    S.toko.password_hash=h;
+    document.getElementById('set-old-pass').value='';
+    document.getElementById('set-new-pass').value='';
+    document.getElementById('set-conf-pass').value='';
+    loading(false);toast('Password berhasil diubah!','success');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+}
+
+// ================================================================
+// EXPORT CSV
+// ================================================================
+function exportCSV() {
+  const p=S.lapPeriod;
+  let txs=[];
+  if(p==='harian'){const d=document.getElementById('lap-date').value||todayISO();txs=S.transaksi.filter(t=>t.tanggal===d);}
+  else if(p==='mingguan'){const d=new Date(document.getElementById('lap-date').value||todayISO());const day=d.getDay()||7;const mon=new Date(d);mon.setDate(d.getDate()-day+1);const sun=new Date(mon);sun.setDate(mon.getDate()+6);txs=S.transaksi.filter(t=>{const td=new Date(t.tanggal);return td>=mon&&td<=sun;});}
+  else{const ym=document.getElementById('lap-month').value||todayISO().slice(0,7);txs=S.transaksi.filter(t=>t.tanggal.startsWith(ym));}
+  if(!txs.length){toast('Tidak ada data untuk diekspor','error');return;}
+  const rows=[['No','Tanggal','Waktu','Item','Total','HPP','Laba','Pembayaran','Kasir']];
+  txs.forEach((t,i)=>{
+    rows.push([i+1,t.tanggal,t.waktu||'-',t.items.map(x=>x.nama+'×'+x.qty).join('; '),t.total,t.total_hpp||0,t.laba||0,t.pembayaran,t.kasir_nama||'-']);
+  });
+  const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`laporan-${S.toko.nama.replace(/\s+/g,'-')}-${todayISO()}.csv`;a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV berhasil diunduh!','success');
 }
 
 // ================================================================
