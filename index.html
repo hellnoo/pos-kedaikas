@@ -278,6 +278,29 @@ select.fi{appearance:none;cursor:pointer}
 /* SETTINGS */
 .set-section{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
 .set-section-title{font-family:'Sora',sans-serif;font-size:.82rem;font-weight:700;margin-bottom:12px;color:var(--amber);display:flex;align-items:center;gap:6px}
+
+/* ===== ONBOARDING ANIMATED ===== */
+#screen-onboarding{background:radial-gradient(ellipse at 20% 50%,#1a0f2e 0%,#0f1117 50%,#0a0e18 100%);overflow:hidden;position:relative}
+.ob-particle{position:absolute;pointer-events:none;user-select:none;opacity:0;animation:obFloat var(--dur,12s) ease-in infinite;animation-delay:var(--delay,0s)}
+@keyframes obFloat{
+  0%{opacity:0;transform:translateY(0) rotate(0deg) scale(.6)}
+  8%{opacity:.35}
+  85%{opacity:.12}
+  100%{opacity:0;transform:translateY(-110vh) rotate(360deg) scale(1.1)}
+}
+.ob-glow1{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.12) 0%,transparent 70%);top:-100px;left:-100px;pointer-events:none;animation:obPulse 6s ease-in-out infinite}
+.ob-glow2{position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 70%);bottom:-80px;right:-80px;pointer-events:none;animation:obPulse 8s ease-in-out infinite reverse}
+@keyframes obPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.7}}
+.ob-glass{background:rgba(20,22,34,.75)!important;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(245,158,11,.18)!important;box-shadow:0 8px 32px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05)!important}
+.ob-logo-text{background:linear-gradient(135deg,#f59e0b 0%,#fde68a 50%,#f59e0b 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:obShimmer 3s linear infinite}
+@keyframes obShimmer{0%{background-position:0% center}100%{background-position:200% center}}
+.ob-btn-glow{box-shadow:0 0 22px rgba(245,158,11,.45),0 4px 16px rgba(245,158,11,.2)!important;transition:all .3s ease!important}
+.ob-btn-glow:hover{box-shadow:0 0 36px rgba(245,158,11,.65),0 6px 24px rgba(245,158,11,.35)!important;transform:translateY(-2px)}
+.ob-enter{animation:obSlideUp .65s ease forwards}
+.ob-enter-d1{animation:obSlideUp .65s ease .1s forwards;opacity:0}
+.ob-enter-d2{animation:obSlideUp .65s ease .2s forwards;opacity:0}
+.ob-enter-d3{animation:obSlideUp .65s ease .3s forwards;opacity:0}
+@keyframes obSlideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
@@ -303,23 +326,30 @@ select.fi{appearance:none;cursor:pointer}
 
 <!-- ===== ONBOARDING ===== -->
 <div id="screen-onboarding" class="screen">
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;flex-direction:column;gap:0">
+  <div class="ob-glow1"></div>
+  <div class="ob-glow2"></div>
+  <div id="ob-particles"></div>
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;flex-direction:column;gap:0;position:relative;z-index:1">
     <div style="width:100%;max-width:420px">
-      <div style="text-align:center;margin-bottom:24px">
-        <div style="font-family:'Sora',sans-serif;font-size:1.8rem;font-weight:800;color:var(--amber)">KedaiKas</div>
-        <div style="font-size:.7rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px">Kasir UMKM Nusantara</div>
+      <div class="ob-enter" style="text-align:center;margin-bottom:24px">
+        <div class="ob-logo-text" style="font-family:'Sora',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:-1px">KedaiKas</div>
+        <div style="font-size:.68rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:3px">Kasir UMKM Nusantara</div>
       </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:32px 28px;box-shadow:0 24px 80px rgba(0,0,0,.5)">
-        <div style="text-align:center;margin-bottom:22px">
-          <div style="font-size:2.4rem;margin-bottom:8px">👋</div>
-          <div style="font-family:'Sora',sans-serif;font-size:1.05rem;font-weight:700">Selamat datang!</div>
+      <div class="ob-glass ob-enter-d1" style="border-radius:20px;padding:32px 28px">
+        <div class="ob-enter-d1" style="text-align:center;margin-bottom:22px">
+          <div style="font-size:2.6rem;margin-bottom:8px;animation:obPulse 2s ease-in-out infinite">👋</div>
+          <div style="font-family:'Sora',sans-serif;font-size:1.1rem;font-weight:700">Selamat datang!</div>
           <div style="font-size:.8rem;color:var(--muted);margin-top:4px">Setup kedai kamu dalam 30 detik. Gratis, tanpa daftar.</div>
         </div>
-        <div class="fg"><label class="fl">Nama Kedai / Toko</label><input class="fi" id="ob-nama" placeholder="Kedai Kopi Nusantara" autofocus></div>
-        <div class="fg"><label class="fl">Nama Kamu (Pemilik)</label><input class="fi" id="ob-owner" placeholder="Budi" onkeydown="if(event.key==='Enter')doOnboarding()"></div>
-        <div class="fg"><label class="fl">Alamat <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-alamat" placeholder="Jl. Merdeka No. 1"></div>
-        <div class="fg" style="margin-bottom:18px"><label class="fl">Telepon <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-telp" type="tel" placeholder="0812xxxxxxxx"></div>
-        <button class="btn btn-amber" style="width:100%;padding:13px;font-size:.95rem" onclick="doOnboarding()" id="ob-btn">🚀 Mulai Sekarang</button>
+        <div class="ob-enter-d2">
+          <div class="fg"><label class="fl">Nama Kedai / Toko</label><input class="fi" id="ob-nama" placeholder="Kedai Kopi Nusantara" autofocus style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <div class="fg"><label class="fl">Nama Kamu (Pemilik)</label><input class="fi" id="ob-owner" placeholder="Budi" onkeydown="if(event.key==='Enter')doOnboarding()" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <div class="fg"><label class="fl">Alamat <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-alamat" placeholder="Jl. Merdeka No. 1" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <div class="fg" style="margin-bottom:18px"><label class="fl">Telepon <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-telp" type="tel" placeholder="0812xxxxxxxx" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+        </div>
+        <div class="ob-enter-d3">
+          <button class="btn btn-amber ob-btn-glow" style="width:100%;padding:14px;font-size:.95rem;border-radius:10px;font-family:'Sora',sans-serif;font-weight:700;letter-spacing:.3px" onclick="doOnboarding()" id="ob-btn">🚀 Mulai Sekarang</button>
+        </div>
 
         <!-- RECONNECT -->
         <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
@@ -749,9 +779,22 @@ function showActivationScreen(namaToko, tokoId) {
   showScreen('activation');
 }
 
+function initParticles() {
+  const wrap = document.getElementById('ob-particles');
+  if (!wrap || wrap.childElementCount > 0) return;
+  const items = ['☕','🍵','✨','⭐','💫','☁️','🫖','🌙','🔥','💛'];
+  for (let i = 0; i < 22; i++) {
+    const el = document.createElement('div');
+    el.className = 'ob-particle';
+    el.textContent = items[Math.floor(Math.random() * items.length)];
+    el.style.cssText = `left:${Math.random()*100}%;top:${90+Math.random()*30}%;--dur:${9+Math.random()*14}s;--delay:${-(Math.random()*20)}s;font-size:${.7+Math.random()*1.1}rem`;
+    wrap.appendChild(el);
+  }
+}
+
 function showOnboarding() {
   showScreen('onboarding');
-  // reset reconnect state
+  initParticles();
   document.getElementById('reconnect-box').style.display='none';
   document.getElementById('rc-results').innerHTML='';
   document.getElementById('rc-nama').value='';
