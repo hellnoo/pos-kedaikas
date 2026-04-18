@@ -332,6 +332,32 @@ select.fi{appearance:none;cursor:pointer}
   </div>
 </div>
 
+<!-- ===== ACTIVATION ===== -->
+<div id="screen-activation" class="screen">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="width:100%;max-width:420px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:32px 28px;box-shadow:0 24px 80px rgba(0,0,0,.5);text-align:center">
+      <div style="font-size:2.8rem;margin-bottom:12px">🎉</div>
+      <div style="font-family:'Sora',sans-serif;font-size:1.15rem;font-weight:800;margin-bottom:6px">Toko berhasil didaftarkan!</div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:6px" id="act-nama"></div>
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:24px">ID: <span id="act-id" style="font-family:'Sora',sans-serif;color:var(--amber)"></span></div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:20px;text-align:left">
+        <div style="font-size:.78rem;font-weight:700;margin-bottom:6px">📋 Langkah berikutnya:</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.8">
+          1. Klik tombol WA di bawah<br>
+          2. Kirim pesan ke kami<br>
+          3. Kami akan balas dengan <strong style="color:var(--text)">PIN akses</strong> kamu<br>
+          4. Masuk ke app dengan PIN tersebut
+        </div>
+      </div>
+      <a id="act-wa-btn" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border-radius:var(--rs);background:#25d366;color:#fff;font-size:.9rem;font-weight:700;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:10px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Minta PIN via WhatsApp
+      </a>
+      <button onclick="showPinScreen()" style="background:none;border:none;color:var(--muted);font-size:.76rem;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Sudah punya PIN? Masuk →</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== PIN LOGIN ===== -->
 <div id="screen-pin" class="screen">
   <div class="pin-box">
@@ -689,6 +715,15 @@ function checkPass(p, h) { return hashPass(p) === h; }
 // ================================================================
 // ONBOARDING
 // ================================================================
+function showActivationScreen(namaToko, tokoId) {
+  const shortId = tokoId.slice(0,8).toUpperCase();
+  document.getElementById('act-nama').textContent = namaToko;
+  document.getElementById('act-id').textContent = shortId;
+  const msg = encodeURIComponent(`Halo, toko saya *${namaToko}* (ID: ${shortId}) baru daftar di KedaiKas. Mohon kirimkan PIN akses saya. Terima kasih!`);
+  document.getElementById('act-wa-btn').href = `https://wa.me/6281245400031?text=${msg}`;
+  showScreen('activation');
+}
+
 function showOnboarding() {
   showScreen('onboarding');
   // reset reconnect state
@@ -765,7 +800,7 @@ async function doOnboarding() {
     }).select().single();
     if (error) throw error;
 
-    await sb.from('pengguna').insert({toko_id:toko.id, nama:owner, role:'owner', pin:hashPass('1234')});
+    await sb.from('pengguna').insert({toko_id:toko.id, nama:owner, role:'owner', pin:'PENDING'});
 
     const defaultMenu = [
       {toko_id:toko.id,nama:'Espresso',icon:'☕',kategori:'Kopi',harga:15000,hpp:7000,status:'aktif'},
@@ -779,8 +814,7 @@ async function doOnboarding() {
     S.toko = toko;
     await loadTokoData();
     loading(false);
-    toast('🎉 Toko berhasil didaftarkan!','success');
-    showPinScreen();
+    showActivationScreen(toko.nama, toko.id);
   } catch(e) {
     toast('Error: '+e.message,'error');
     loading(false);
@@ -853,6 +887,11 @@ function updatePinDots() {
 }
 
 function checkPin() {
+  if (selectedPinUser.pin === 'PENDING') {
+    document.getElementById('pin-err').textContent='⏳ PIN belum aktif. Hubungi admin via WA!';
+    pinInput=''; updatePinDots();
+    return;
+  }
   const plain = selectedPinUser.pin === pinInput;
   const hashed = selectedPinUser.pin === hashPass(pinInput);
   if (plain || hashed) {
