@@ -837,7 +837,20 @@ function updateClock() {
 async function logout() {
   S.currentUser=null; S.cart=[];
   pinInput=''; selectedPinUser=null;
-  showPinScreen();
+  if (S.toko) {
+    showPinScreen();
+  } else {
+    // Data hilang dari memory (misal halaman di-refresh), load ulang dari localStorage
+    const tid = localStorage.getItem('kk_toko_id');
+    if (tid) {
+      loading(true,'Memuat...');
+      try {
+        const {data} = await sb.from('toko').select('*').eq('id',tid).single();
+        if (data) { S.toko=data; await loadTokoData(); loading(false); showPinScreen(); }
+        else { localStorage.removeItem('kk_toko_id'); loading(false); showOnboarding(); }
+      } catch(e) { loading(false); showOnboarding(); }
+    } else { showOnboarding(); }
+  }
 }
 
 // ================================================================
