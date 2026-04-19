@@ -316,6 +316,39 @@ select.fi{appearance:none;cursor:pointer}
 .ob-enter-d2{animation:obSlideUp .65s ease .2s forwards;opacity:0}
 .ob-enter-d3{animation:obSlideUp .65s ease .3s forwards;opacity:0}
 @keyframes obSlideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+/* QUICK CASH BUTTONS */
+.quick-btns{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 8px}
+.qb{padding:5px 0;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg3);color:var(--muted2);font-size:.7rem;font-weight:700;cursor:pointer;transition:all .15s;font-family:'Sora',sans-serif;flex:1;min-width:40px;text-align:center}
+.qb:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-p)}
+.qb.exact{border-color:var(--green);color:var(--green);background:var(--green-p)}
+
+/* STOK LOG */
+.stok-log-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:.78rem}
+.stok-log-row:last-child{border:none}
+.log-delta{font-family:'Sora',sans-serif;font-weight:700;min-width:54px;text-align:right}
+.log-delta.pos{color:var(--green)}
+.log-delta.neg{color:var(--red)}
+
+/* LAPORAN FILTER */
+.lap-filter{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.lap-filter select.fi{width:auto;flex:1;min-width:110px;font-size:.8rem;padding:7px 10px}
+
+/* LAPORAN BREAKDOWN */
+.breakdown-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.bk-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.83rem}
+.bk-row:last-child{border:none}
+.bk-lbl{color:var(--muted)}
+.bk-val{font-weight:700;font-family:'Sora',sans-serif}
+
+/* MOBILE POS 2-COL */
+@media(max-width:768px){
+  .pos-grid{grid-template-columns:repeat(2,1fr)!important}
+  .m-tile{padding:10px 7px}
+  .mt-ico{font-size:1.5rem}
+  .mt-name{font-size:.72rem}
+  .mt-price{font-size:.76rem}
+}
 </style>
 </head>
 <body>
@@ -522,7 +555,14 @@ select.fi{appearance:none;cursor:pointer}
           </div>
           <div class="cash-wrap" id="cash-wrap">
             <input class="fi" type="number" id="cash-in" placeholder="Uang diterima" oninput="calcChange()">
-            <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-top:5px;color:var(--muted)">
+            <div class="quick-btns" id="quick-cash-btns">
+              <button class="qb" onclick="setQuickCash('pas')">Uang Pas</button>
+              <button class="qb" onclick="setQuickCash(50000)">50k</button>
+              <button class="qb" onclick="setQuickCash(100000)">100k</button>
+              <button class="qb" onclick="setQuickCash(150000)">150k</button>
+              <button class="qb" onclick="setQuickCash(200000)">200k</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-top:4px;color:var(--muted)">
               <span>Kembalian</span><span id="change-disp" style="color:var(--green);font-weight:700">Rp 0</span>
             </div>
           </div>
@@ -545,7 +585,7 @@ select.fi{appearance:none;cursor:pointer}
         </div>
         <div class="card">
           <div class="card-t">Transaksi Terbaru</div>
-          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Waktu</th><th>Item</th><th>Total</th><th>Bayar</th><th>Kasir</th></tr></thead><tbody id="db-tx"></tbody></table></div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Waktu</th><th>Item</th><th>Total</th><th>Bayar</th><th>Kasir</th><th></th></tr></thead><tbody id="db-tx"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -558,19 +598,34 @@ select.fi{appearance:none;cursor:pointer}
           <button class="lap-tab" onclick="lapTab('mingguan',this)">Mingguan</button>
           <button class="lap-tab" onclick="lapTab('bulanan',this)">Bulanan</button>
         </div>
-        <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <input class="fi" type="date" id="lap-date" style="width:auto" onchange="renderLaporan()">
           <input class="fi" type="month" id="lap-month" style="width:auto;display:none" onchange="renderLaporan()">
           <button class="btn btn-ghost" onclick="exportCSV()" style="margin-left:auto">⬇️ Export CSV</button>
+        </div>
+        <div class="lap-filter">
+          <select class="fi" id="lap-filter-kasir" onchange="renderLaporan()">
+            <option value="">Semua Kasir</option>
+          </select>
+          <select class="fi" id="lap-filter-bayar" onchange="renderLaporan()">
+            <option value="">Semua Metode Bayar</option>
+            <option value="cash">Cash</option>
+            <option value="qris">QRIS</option>
+          </select>
         </div>
         <div class="g4" style="margin-bottom:16px" id="lap-stats"></div>
         <div class="g2" style="margin-bottom:14px">
           <div class="card"><div class="card-t">Ringkasan Laba</div><div id="lap-profit"></div></div>
           <div class="card"><div class="card-t">Menu Terjual</div><div id="lap-chart"></div></div>
         </div>
+        <div class="breakdown-grid">
+          <div class="card"><div class="card-t">💳 Per Metode Bayar</div><div id="lap-bk-bayar"></div></div>
+          <div class="card"><div class="card-t">👤 Per Kasir</div><div id="lap-bk-kasir"></div></div>
+          <div class="card"><div class="card-t">🕐 Per Jam (Puncak)</div><div id="lap-bk-jam"></div></div>
+        </div>
         <div class="card">
-          <div class="card-t">Detail Transaksi</div>
-          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Waktu</th><th>Item</th><th>Total</th><th>HPP</th><th>Laba</th><th>Bayar</th><th>Kasir</th></tr></thead><tbody id="lap-tx"></tbody></table></div>
+          <div class="card-t">Detail Transaksi <span id="lap-tx-count" style="font-size:.75rem;color:var(--muted);font-weight:400"></span></div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Waktu</th><th>Item</th><th>Total</th><th>HPP</th><th>Laba</th><th>Bayar</th><th>Kasir</th><th>Aksi</th></tr></thead><tbody id="lap-tx"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -597,7 +652,11 @@ select.fi{appearance:none;cursor:pointer}
           </div>
         </div>
         <div id="stok-alerts"></div>
-        <div class="card"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Bahan</th><th>Satuan</th><th>Stok</th><th>Min</th><th>Harga/Satuan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="stok-tbl"></tbody></table></div></div>
+        <div class="card" style="margin-bottom:14px"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Bahan</th><th>Satuan</th><th>Stok</th><th>Min</th><th>Harga/Satuan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="stok-tbl"></tbody></table></div></div>
+        <div class="card">
+          <div class="card-t">📋 Riwayat Perubahan Stok <button class="btn btn-sm btn-ghost" onclick="clearStokLog()" style="font-size:.68rem">Hapus Log</button></div>
+          <div id="stok-log-list"><div class="empty"><p style="font-size:.78rem">Belum ada perubahan stok di sesi ini</p></div></div>
+        </div>
       </div>
     </div>
 
@@ -1300,6 +1359,7 @@ async function processCheckout() {
         if(b) {
           const newStok=Math.max(0, b.stok - ing.qty*item.qty);
           await sb.from('bahan').update({stok:newStok}).eq('id',b.id);
+          addStokLog(b.nama, -(ing.qty*item.qty), `Terjual: ${item.nama} ×${item.qty}`);
           b.stok=newStok;
         }
       }
@@ -1383,7 +1443,7 @@ function renderDashboard() {
   document.getElementById('db-terlaris').innerHTML=top.length?`<div class="chart-wrap">${top.map(([n,q])=>`<div class="cb-row"><span class="cb-lbl">${n}</span><div class="cb-bg"><div class="cb-fill" style="width:${q/mq*100}%;background:var(--green)"></div></div><span class="cb-val">${q} pcs</span></div>`).join('')}</div>`:'<div class="empty"><p>Belum ada data</p></div>';
 
   const recent=[...S.transaksi].slice(0,8);
-  document.getElementById('db-tx').innerHTML=recent.length?recent.map(t=>`<tr><td>${t.tanggal} ${t.waktu}</td><td style="font-size:.76rem">${t.items.map(i=>i.nama+(i.qty>1?'×'+i.qty:'')).join(', ')}</td><td style="color:var(--amber);font-weight:700">${fmt(t.total)}</td><td><span class="badge ${t.pembayaran==='cash'?'badge-green':'badge-blue'}">${t.pembayaran}</span></td><td style="color:var(--muted);font-size:.76rem">${t.kasir_nama}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Belum ada transaksi</td></tr>';
+  document.getElementById('db-tx').innerHTML=recent.length?recent.map(t=>`<tr><td style="white-space:nowrap">${t.tanggal}<br><span style="color:var(--muted);font-size:.7rem">${t.waktu||''}</span></td><td style="font-size:.76rem">${t.items.map(i=>i.nama+(i.qty>1?'×'+i.qty:'')).join(', ')}</td><td style="color:var(--amber);font-weight:700">${fmt(t.total)}</td><td><span class="badge ${t.pembayaran==='cash'?'badge-green':'badge-blue'}">${t.pembayaran}</span></td><td style="color:var(--muted);font-size:.76rem">${t.kasir_nama}</td><td><button class="btn btn-sm btn-ghost" onclick="showReprintStruk('${t.id}')" title="Cetak ulang">🖨️</button></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Belum ada transaksi</td></tr>';
 }
 
 // ================================================================
@@ -1404,6 +1464,18 @@ function renderLaporan() {
   if(p==='harian'){const d=document.getElementById('lap-date').value||todayISO();txs=S.transaksi.filter(t=>t.tanggal===d);}
   else if(p==='mingguan'){const d=new Date(document.getElementById('lap-date').value||todayISO());const day=d.getDay()||7;const mon=new Date(d);mon.setDate(d.getDate()-day+1);const sun=new Date(mon);sun.setDate(mon.getDate()+6);txs=S.transaksi.filter(t=>{const td=new Date(t.tanggal);return td>=mon&&td<=sun;});}
   else{const ym=document.getElementById('lap-month').value||todayISO().slice(0,7);txs=S.transaksi.filter(t=>t.tanggal.startsWith(ym));}
+
+  // Populate kasir filter dropdown
+  const kasirSel=document.getElementById('lap-filter-kasir');
+  const prevKasir=kasirSel.value;
+  const kasirList=[...new Set(S.transaksi.map(t=>t.kasir_nama).filter(Boolean))].sort();
+  kasirSel.innerHTML='<option value="">Semua Kasir</option>'+kasirList.map(k=>`<option value="${k}" ${k===prevKasir?'selected':''}>${k}</option>`).join('');
+
+  // Apply filters
+  const fKasir=document.getElementById('lap-filter-kasir').value;
+  const fBayar=document.getElementById('lap-filter-bayar').value;
+  if(fKasir) txs=txs.filter(t=>t.kasir_nama===fKasir);
+  if(fBayar) txs=txs.filter(t=>t.pembayaran===fBayar);
 
   const rev=txs.reduce((s,t)=>s+t.total,0);
   const hpp=txs.reduce((s,t)=>s+t.total_hpp,0);
@@ -1429,7 +1501,24 @@ function renderLaporan() {
   const mm=Math.max(...ms.map(x=>x[1]),1);
   document.getElementById('lap-chart').innerHTML=ms.length?`<div class="chart-wrap">${ms.map(([n,q])=>`<div class="cb-row"><span class="cb-lbl">${n}</span><div class="cb-bg"><div class="cb-fill" style="width:${q/mm*100}%"></div></div><span class="cb-val">${q} pcs</span></div>`).join('')}</div>`:'<div class="empty"><p style="font-size:.8rem">Tidak ada data</p></div>';
 
-  document.getElementById('lap-tx').innerHTML=txs.length?[...txs].map(t=>`<tr><td>${t.waktu}</td><td style="font-size:.75rem;max-width:150px">${t.items.map(i=>i.nama+(i.qty>1?'×'+i.qty:'')).join(', ')}</td><td style="color:var(--amber);font-weight:700">${fmt(t.total)}</td><td style="color:var(--red)">${fmt(t.total_hpp)}</td><td style="color:var(--green);font-weight:700">${fmt(t.laba)}</td><td><span class="badge ${t.pembayaran==='cash'?'badge-green':'badge-blue'}">${t.pembayaran}</span></td><td style="color:var(--muted);font-size:.75rem">${t.kasir_nama}</td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Tidak ada transaksi</td></tr>';
+  renderLaporanBreakdown(txs);
+
+  const countEl=document.getElementById('lap-tx-count');
+  if(countEl) countEl.textContent=txs.length?`(${txs.length} transaksi)`:'';
+  document.getElementById('lap-tx').innerHTML=txs.length?[...txs].map(t=>`
+    <tr>
+      <td style="white-space:nowrap">${t.tanggal}<br><span style="color:var(--muted);font-size:.72rem">${t.waktu||''}</span></td>
+      <td style="font-size:.75rem;max-width:140px">${t.items.map(i=>i.nama+(i.qty>1?'×'+i.qty:'')).join(', ')}</td>
+      <td style="color:var(--amber);font-weight:700">${fmt(t.total)}</td>
+      <td style="color:var(--red)">${fmt(t.total_hpp)}</td>
+      <td style="color:var(--green);font-weight:700">${fmt(t.laba)}</td>
+      <td><span class="badge ${t.pembayaran==='cash'?'badge-green':'badge-blue'}">${t.pembayaran}</span></td>
+      <td style="color:var(--muted);font-size:.75rem">${t.kasir_nama||'—'}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-sm btn-ghost" onclick="showReprintStruk('${t.id}')" title="Cetak ulang struk">🖨️</button>
+        ${S.currentUser?.role==='owner'?`<button class="btn btn-sm btn-red" onclick="voidTransaksi('${t.id}')" title="Void transaksi">Void</button>`:''}
+      </td>
+    </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Tidak ada transaksi</td></tr>';
 }
 
 // ================================================================
@@ -1492,6 +1581,7 @@ function renderStokPage() {
     const stxt=pct<=0?'Habis':pct<=100?'Kritis':'Aman';
     return `<tr><td><strong>${b.nama}</strong></td><td style="color:var(--muted)">${b.satuan}</td><td style="font-weight:700">${b.stok.toLocaleString('id-ID')}</td><td style="color:var(--muted)">${b.min_stok}</td><td style="color:var(--muted)">${fmt(b.harga_satuan)}/${b.satuan}</td><td><span class="badge ${st}">${stxt}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button></td></tr>`;
   }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Belum ada bahan</td></tr>';
+  renderStokLog();
 }
 
 function openStokModal(id) {
@@ -1542,6 +1632,7 @@ async function saveRestock() {
   loading(true,'Restock...');
   await sb.from('bahan').update({stok:newStok}).eq('id',id);
   b.stok=newStok;
+  addStokLog(b.nama, +qty, 'Restock manual');
   loading(false);closeModal('restock-modal');renderStokPage();
   toast(`Stok ${b.nama} +${qty} ${b.satuan}!`,'success');
 }
@@ -1707,6 +1798,110 @@ async function changePassword() {
     document.getElementById('set-conf-pass').value='';
     loading(false);toast('Password berhasil diubah!','success');
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
+}
+
+// ================================================================
+// QUICK CASH
+// ================================================================
+function setQuickCash(n) {
+  const sub = S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
+  const dk = parseFloat(document.getElementById('dk-val').value)||0;
+  const disc = S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
+  const tot = Math.max(0,sub-disc);
+  const val = n==='pas' ? tot : n;
+  document.getElementById('cash-in').value = val;
+  calcChange();
+}
+
+// ================================================================
+// VOID TRANSAKSI
+// ================================================================
+async function voidTransaksi(id) {
+  if (!confirm('Void transaksi ini?\n\nStok tidak otomatis dikembalikan — sesuaikan manual jika perlu.')) return;
+  loading(true,'Membatalkan transaksi...');
+  try {
+    await sb.from('transaksi').delete().eq('id', id);
+    S.transaksi = S.transaksi.filter(t=>t.id!==id);
+    loading(false);
+    renderLaporan();
+    renderDashboard();
+    toast('Transaksi dibatalkan','info');
+  } catch(e) { toast('Error: '+e.message,'error'); loading(false); }
+}
+
+// ================================================================
+// REPRINT STRUK
+// ================================================================
+function showReprintStruk(id) {
+  const t = S.transaksi.find(x=>x.id===id);
+  if (!t) { toast('Data tidak ditemukan','error'); return; }
+  const nomorTrx = `TRX-${(t.tanggal||'').replace(/-/g,'')}-${id.slice(0,4).toUpperCase()}`;
+  showStruk({...t, sub:t.total+(t.kembalian||0)-(t.kembalian||0), disc:0, nomorTrx});
+}
+
+// ================================================================
+// STOK LOG
+// ================================================================
+function getStokLog() {
+  try { return JSON.parse(localStorage.getItem('stok_log_'+(S.toko?.id||''))||'[]'); } catch(e) { return []; }
+}
+function addStokLog(bahan_nama, delta, reason) {
+  const log = getStokLog();
+  log.unshift({bahan_nama, delta, reason, kasir: S.currentUser?.nama||'—', waktu: nowStr(), tgl: todayISO()});
+  if (log.length > 200) log.pop();
+  localStorage.setItem('stok_log_'+(S.toko?.id||''), JSON.stringify(log));
+}
+function renderStokLog() {
+  const log = getStokLog();
+  const el = document.getElementById('stok-log-list');
+  if (!el) return;
+  if (!log.length) { el.innerHTML='<div class="empty"><p style="font-size:.78rem">Belum ada perubahan stok</p></div>'; return; }
+  el.innerHTML = log.slice(0,50).map(l=>`
+    <div class="stok-log-row">
+      <div style="flex:1"><strong style="font-size:.83rem">${l.bahan_nama}</strong><div style="font-size:.72rem;color:var(--muted)">${l.reason} · ${l.kasir} · ${l.tgl} ${l.waktu}</div></div>
+      <div class="log-delta ${l.delta>0?'pos':'neg'}">${l.delta>0?'+':''}${l.delta}</div>
+    </div>`).join('');
+}
+function clearStokLog() {
+  if (!confirm('Hapus semua riwayat stok?')) return;
+  localStorage.removeItem('stok_log_'+(S.toko?.id||''));
+  renderStokLog();
+}
+
+// ================================================================
+// LAPORAN BREAKDOWN
+// ================================================================
+function renderLaporanBreakdown(txs) {
+  // By payment method
+  const byBayar = {};
+  txs.forEach(t=>{ byBayar[t.pembayaran]=(byBayar[t.pembayaran]||0)+t.total; });
+  document.getElementById('lap-bk-bayar').innerHTML = Object.keys(byBayar).length
+    ? Object.entries(byBayar).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+        <div class="bk-row"><span class="bk-lbl">${k==='cash'?'💵 Cash':'📱 QRIS'}</span>
+        <div style="text-align:right"><div class="bk-val">${fmt(v)}</div>
+        <div style="font-size:.7rem;color:var(--muted)">${txs.filter(t=>t.pembayaran===k).length} trx</div></div></div>`).join('')
+    : '<div class="empty" style="padding:12px"><p style="font-size:.78rem">Tidak ada data</p></div>';
+
+  // By kasir
+  const byKasir = {};
+  txs.forEach(t=>{ const k=t.kasir_nama||'?'; if(!byKasir[k]) byKasir[k]={total:0,count:0}; byKasir[k].total+=t.total; byKasir[k].count++; });
+  document.getElementById('lap-bk-kasir').innerHTML = Object.keys(byKasir).length
+    ? Object.entries(byKasir).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>`
+        <div class="bk-row"><span class="bk-lbl">👤 ${k}</span>
+        <div style="text-align:right"><div class="bk-val">${fmt(v.total)}</div>
+        <div style="font-size:.7rem;color:var(--muted)">${v.count} trx</div></div></div>`).join('')
+    : '<div class="empty" style="padding:12px"><p style="font-size:.78rem">Tidak ada data</p></div>';
+
+  // By hour
+  const byHour = {};
+  txs.forEach(t=>{ const h=parseInt((t.waktu||'00:00').split(':')[0]); byHour[h]=(byHour[h]||0)+t.total; });
+  const topHours = Object.entries(byHour).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('lap-bk-jam').innerHTML = topHours.length
+    ? topHours.map(([h,v])=>`
+        <div class="bk-row"><span class="bk-lbl">🕐 ${String(h).padStart(2,'0')}:00–${String(h).padStart(2,'0')}:59</span>
+        <div style="text-align:right"><div class="bk-val">${fmt(v)}</div>
+        <div style="font-size:.7rem;color:var(--muted)">${txs.filter(t=>parseInt((t.waktu||'0').split(':')[0])===+h).length} trx</div></div></div>`).join('')
+    : '<div class="empty" style="padding:12px"><p style="font-size:.78rem">Tidak ada data</p></div>';
 }
 
 // ================================================================
