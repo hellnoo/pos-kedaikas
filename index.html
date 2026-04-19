@@ -829,24 +829,21 @@ function initParticles() {
 
   const onMove = e => {
     const t = e.touches ? e.touches[0] : e;
-    const r = canvas.getBoundingClientRect();
-    mouse.x = t.clientX - r.left;
-    mouse.y = t.clientY - r.top;
+    mouse.x = t.clientX;
+    mouse.y = t.clientY;
     mouse.active = true;
   };
   const onLeave = () => mouse.active = false;
-  canvas.addEventListener('mousemove', onMove);
-  canvas.addEventListener('mouseleave', onLeave);
-  canvas.addEventListener('touchmove', onMove, {passive:true});
-  canvas.addEventListener('touchend', onLeave);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, {passive:true});
+  window.addEventListener('touchend', onLeave);
 
   const onResize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
   window.addEventListener('resize', onResize);
   canvas._cleanup = () => {
-    canvas.removeEventListener('mousemove', onMove);
-    canvas.removeEventListener('mouseleave', onLeave);
-    canvas.removeEventListener('touchmove', onMove);
-    canvas.removeEventListener('touchend', onLeave);
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('touchmove', onMove);
+    window.removeEventListener('touchend', onLeave);
     window.removeEventListener('resize', onResize);
   };
 
