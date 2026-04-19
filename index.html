@@ -285,6 +285,27 @@ select.fi{appearance:none;cursor:pointer}
 .ob-glow1{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.12) 0%,transparent 70%);top:-100px;left:-100px;pointer-events:none;animation:obPulse 6s ease-in-out infinite}
 .ob-glow2{position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 70%);bottom:-80px;right:-80px;pointer-events:none;animation:obPulse 8s ease-in-out infinite reverse}
 @keyframes obPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.7}}
+/* Onboarding two-column layout */
+.ob-layout{width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;padding:24px}
+.ob-left{display:none;flex:1;max-width:520px;padding:40px 48px 40px 24px}
+.ob-left-logo{font-family:'Sora',sans-serif;font-size:2.8rem;font-weight:800;color:var(--amber);letter-spacing:-1.5px;line-height:1}
+.ob-left-tagline{font-size:.68rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:4px;margin-bottom:32px}
+.ob-left-title{font-family:'Sora',sans-serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;line-height:1.2;margin-bottom:14px}
+.ob-left-title span{color:var(--amber)}
+.ob-left-desc{font-size:.92rem;color:var(--muted2);line-height:1.75;margin-bottom:36px;max-width:400px}
+.ob-feat-list{display:flex;flex-direction:column;gap:14px}
+.ob-feat{display:flex;align-items:flex-start;gap:12px}
+.ob-feat-ico{font-size:1.2rem;flex-shrink:0;margin-top:1px}
+.ob-feat-text{font-size:.85rem;color:var(--muted2);line-height:1.6}
+.ob-feat-text strong{color:var(--text);display:block;font-size:.88rem;margin-bottom:1px}
+.ob-right{width:100%;max-width:420px}
+@media(min-width:900px){
+  .ob-left{display:block}
+  .ob-right{flex-shrink:0}
+  .ob-layout{justify-content:center;gap:0}
+  #ob-mobile-header{display:none!important}
+}
+.ob-left-logo{background:linear-gradient(135deg,#f59e0b 0%,#fde68a 50%,#f59e0b 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:obShimmer 3s linear infinite}
 .ob-glass{background:rgba(20,22,34,.75)!important;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(245,158,11,.18)!important;box-shadow:0 8px 32px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05)!important}
 .ob-logo-text{background:linear-gradient(135deg,#f59e0b 0%,#fde68a 50%,#f59e0b 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:obShimmer 3s linear infinite}
 @keyframes obShimmer{0%{background-position:0% center}100%{background-position:200% center}}
@@ -323,11 +344,25 @@ select.fi{appearance:none;cursor:pointer}
   <div class="ob-glow1"></div>
   <div class="ob-glow2"></div>
   <canvas id="ob-canvas"></canvas>
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;flex-direction:column;gap:0;position:relative;z-index:1">
-    <div style="width:100%;max-width:420px">
-      <div class="ob-enter" style="text-align:center;margin-bottom:24px">
-        <div class="ob-logo-text" style="font-family:'Sora',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:-1px">KedaiKas</div>
-        <div style="font-size:.68rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:3px">Kasir UMKM Nusantara</div>
+  <div class="ob-layout">
+    <!-- LEFT: branding + features (desktop only) -->
+    <div class="ob-left ob-enter">
+      <div class="ob-left-logo">KedaiKas</div>
+      <div class="ob-left-tagline">Kasir UMKM Nusantara</div>
+      <div class="ob-left-title">Kelola kasir<br>toko kamu<br><span>lebih mudah</span></div>
+      <div class="ob-left-desc">Sistem kasir gratis untuk UMKM Indonesia. Catat transaksi, kelola menu, pantau stok, dan lihat laporan — semua dalam satu tempat.</div>
+      <div class="ob-feat-list">
+        <div class="ob-feat"><div class="ob-feat-ico">🧾</div><div class="ob-feat-text"><strong>Kasir cepat & mudah</strong>Proses transaksi dalam hitungan detik, support tunai & QRIS</div></div>
+        <div class="ob-feat"><div class="ob-feat-ico">📦</div><div class="ob-feat-text"><strong>Manajemen stok bahan</strong>Pantau stok bahan baku, resep otomatis kurangi stok</div></div>
+        <div class="ob-feat"><div class="ob-feat-ico">📊</div><div class="ob-feat-text"><strong>Laporan & analitik</strong>Lihat omset, laba, dan tren penjualan harian/bulanan</div></div>
+        <div class="ob-feat"><div class="ob-feat-ico">👥</div><div class="ob-feat-text"><strong>Multi kasir dengan PIN</strong>Atur akses kasir berbeda, data aman per toko</div></div>
+      </div>
+    </div>
+    <!-- RIGHT: form -->
+    <div class="ob-right">
+      <div class="ob-enter" style="text-align:center;margin-bottom:20px;display:block" id="ob-mobile-header">
+        <div style="font-family:'Sora',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-1px;color:var(--amber)">KedaiKas</div>
+        <div style="font-size:.65rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:3px">Kasir UMKM Nusantara</div>
       </div>
       <div class="ob-glass ob-enter-d1" style="border-radius:20px;padding:32px 28px">
         <div class="ob-enter-d1" style="text-align:center;margin-bottom:22px">
