@@ -288,6 +288,28 @@ select.fi{appearance:none;cursor:pointer}
 .qris-box canvas{border-radius:8px;background:#fff;padding:6px}
 .qris-hint{font-size:.72rem;color:var(--muted);margin-top:6px}
 
+/* QRIS WAITING STATE */
+.qris-waiting{text-align:center;padding:10px 0}
+.qris-amount{font-family:'Sora',sans-serif;font-size:1.15rem;font-weight:800;color:var(--amber);margin-bottom:4px}
+.qris-scan-hint{font-size:.72rem;color:var(--muted2);margin-bottom:10px}
+.qris-pulse{display:inline-flex;align-items:center;gap:7px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:99px;padding:5px 14px;font-size:.75rem;color:var(--green);font-weight:600;margin-bottom:10px;animation:qrisPulse 1.8s ease-in-out infinite}
+@keyframes qrisPulse{0%,100%{opacity:1}50%{opacity:.55}}
+.qris-pulse::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);animation:qrisDot 1.8s ease-in-out infinite}
+@keyframes qrisDot{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
+.qris-confirm-btn{width:100%;padding:11px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-family:'Sora',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;transition:all .18s;box-shadow:0 3px 12px rgba(16,185,129,.3);margin-top:4px}
+.qris-confirm-btn:hover{background:var(--green-d);transform:translateY(-1px)}
+
+/* NOTIF PAYMENT MASUK */
+.notif-payment{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.8);background:var(--bg2);border:2px solid var(--green);border-radius:20px;padding:32px 28px;text-align:center;z-index:9995;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 60px rgba(16,185,129,.3),0 24px 60px rgba(0,0,0,.6);min-width:280px}
+.notif-payment.show{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+.notif-payment-ico{font-size:3.5rem;margin-bottom:10px;animation:notifBounce .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes notifBounce{from{transform:scale(0)}to{transform:scale(1)}}
+.notif-payment-title{font-family:'Sora',sans-serif;font-size:1.1rem;font-weight:800;color:var(--green);margin-bottom:4px}
+.notif-payment-amt{font-family:'Sora',sans-serif;font-size:1.5rem;font-weight:800;margin-bottom:4px}
+.notif-payment-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px}
+.notif-overlay-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9994;opacity:0;pointer-events:none;transition:opacity .3s}
+.notif-overlay-bg.show{opacity:1;pointer-events:auto}
+
 /* SETTINGS */
 .set-section{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
 .set-section-title{font-family:'Sora',sans-serif;font-size:.82rem;font-weight:700;margin-bottom:12px;color:var(--amber);display:flex;align-items:center;gap:6px}
@@ -384,6 +406,16 @@ select.fi{appearance:none;cursor:pointer}
 
 <!-- TOAST -->
 <div id="toast"></div>
+
+<!-- NOTIF PEMBAYARAN MASUK -->
+<div class="notif-overlay-bg" id="notif-bg" onclick="closeNotifPayment()"></div>
+<div class="notif-payment" id="notif-payment">
+  <div class="notif-payment-ico">✅</div>
+  <div class="notif-payment-title">Pembayaran Diterima!</div>
+  <div class="notif-payment-amt" id="notif-amt">Rp 0</div>
+  <div class="notif-payment-sub" id="notif-sub">QRIS</div>
+  <button class="btn btn-green" style="width:100%" onclick="closeNotifPayment()">OK, Lanjut</button>
+</div>
 
 <!-- ===== ONBOARDING ===== -->
 <div id="screen-onboarding" class="screen">
@@ -580,9 +612,19 @@ select.fi{appearance:none;cursor:pointer}
               <span>Kembalian</span><span id="change-disp" style="color:var(--green);font-weight:700">Rp 0</span>
             </div>
           </div>
-          <div class="qris-box" id="qris-wrap" style="display:none">
-            <canvas id="qris-canvas"></canvas>
-            <p class="qris-hint" id="qris-hint"></p>
+          <div id="qris-wrap" style="display:none">
+            <div class="qris-waiting">
+              <div class="qris-amount" id="qris-amount-lbl"></div>
+              <div class="qris-scan-hint">Minta pelanggan scan QR di bawah</div>
+              <div class="qris-box">
+                <canvas id="qris-canvas"></canvas>
+                <p class="qris-hint" id="qris-hint"></p>
+              </div>
+              <div class="qris-pulse" id="qris-pulse-lbl" style="display:none">Menunggu pembayaran...</div>
+              <button class="qris-confirm-btn" id="qris-confirm-btn" onclick="confirmQRISPayment()" style="display:none">
+                ✅ Konfirmasi Pembayaran Diterima
+              </button>
+            </div>
           </div>
           <button class="co-btn" id="co-btn" onclick="processCheckout()" disabled>Proses Bayar</button>
         </div>
@@ -708,9 +750,17 @@ select.fi{appearance:none;cursor:pointer}
         </div>
         <div class="set-section">
           <div class="set-section-title">📱 QRIS Pembayaran</div>
-          <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Masukkan kode/string QRIS dari bank atau penyedia pembayaran kamu. QR code akan ditampilkan saat kasir pilih QRIS.</p>
-          <div class="fg"><label class="fl">QRIS String / Nomor Rekening</label><input class="fi" id="set-qris" placeholder="00020101021126..."></div>
-          <button class="btn btn-amber" onclick="saveSettingsQRIS()">💾 Simpan QRIS</button>
+          <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Masukkan QRIS string dari bank/e-wallet kamu. QR akan muncul otomatis saat kasir pilih metode QRIS.</p>
+          <div class="fg"><label class="fl">QRIS String</label><input class="fi" id="set-qris" placeholder="00020101021126..." oninput="previewQRIS()"></div>
+          <div id="set-qris-preview" style="display:none;text-align:center;margin:10px 0 14px">
+            <canvas id="set-qris-canvas" style="border-radius:8px;background:#fff;padding:8px"></canvas>
+            <p style="font-size:.72rem;color:var(--green);margin-top:6px;font-weight:600">✅ QR valid — siap dipakai</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-amber" onclick="saveSettingsQRIS()">💾 Simpan QRIS</button>
+            <button class="btn btn-ghost" onclick="testQRISNotif()">🔔 Test Notifikasi</button>
+          </div>
+          <p style="font-size:.7rem;color:var(--muted);margin-top:8px">💡 QRIS string bisa didapat dari aplikasi bank (BCA, BRI, BNI, GoPay, OVO, dll) — pilih <em>Terima QRIS</em> lalu copy string-nya.</p>
         </div>
         <div class="set-section" style="border-color:rgba(239,68,68,.25)">
           <div class="set-section-title" style="color:var(--red)">⚠️ Ganti Toko</div>
@@ -1207,6 +1257,8 @@ function initApp() {
   if(u.role==='owner') renderDashboard();
   updateNavBadges();
   updateClock();
+  requestNotifPermission();
+  initRealtimeNotif();
 }
 
 function updateClock() {
@@ -1335,24 +1387,138 @@ function setPayMethod(m) {
   document.getElementById('pb-qris').classList.toggle('on',m==='qris');
   document.getElementById('cash-wrap').style.display=m==='cash'?'block':'none';
   document.getElementById('qris-wrap').style.display=m==='qris'?'block':'none';
-  if(m==='qris') renderQRIS();
+  const coBtn = document.getElementById('co-btn');
+  if(m==='qris') {
+    renderQRIS();
+    // Tombol utama jadi "Tampilkan QR", konfirmasi pakai tombol sendiri
+    if(coBtn) coBtn.textContent='📱 Tampilkan QR Bayar';
+  } else {
+    if(coBtn) coBtn.textContent='Proses Bayar';
+  }
   calcChange();
 }
 
+function getQRISData() {
+  return S.toko.qris_string || localStorage.getItem('qris_'+S.toko.id) || '';
+}
+
 function renderQRIS() {
-  const qrisData=localStorage.getItem('qris_'+S.toko.id);
-  const canvas=document.getElementById('qris-canvas');
-  const hint=document.getElementById('qris-hint');
-  if(qrisData && typeof QRCode!=='undefined') {
-    canvas.style.display='block';
-    QRCode.toCanvas(canvas,qrisData,{width:180,margin:1,color:{dark:'#111111',light:'#ffffff'}},err=>{
-      if(err){canvas.style.display='none';hint.textContent='Gagal render QR code.';}
-      else hint.textContent='Scan QR untuk membayar';
+  const qrisData = getQRISData();
+  const canvas = document.getElementById('qris-canvas');
+  const hint = document.getElementById('qris-hint');
+  const pulse = document.getElementById('qris-pulse-lbl');
+  const confirmBtn = document.getElementById('qris-confirm-btn');
+  const amtLbl = document.getElementById('qris-amount-lbl');
+
+  // Tampilkan nominal
+  const sub = S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
+  const dk = parseFloat(document.getElementById('dk-val').value)||0;
+  const disc = S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
+  const tot = Math.max(0,sub-disc);
+  if (amtLbl) amtLbl.textContent = tot > 0 ? fmt(tot) : '';
+
+  if (qrisData && typeof QRCode !== 'undefined') {
+    canvas.style.display = 'block';
+    QRCode.toCanvas(canvas, qrisData, {width:185,margin:1,color:{dark:'#111111',light:'#ffffff'}}, err => {
+      if (err) { canvas.style.display='none'; hint.textContent='Gagal render QR code.'; return; }
+      hint.textContent = 'Scan QR · ' + (S.toko.nama||'');
+      if (pulse) { pulse.style.display='inline-flex'; }
+      if (confirmBtn) { confirmBtn.style.display='block'; }
     });
   } else {
-    canvas.style.display='none';
-    hint.textContent=qrisData?'QR library belum siap.':'QRIS belum dikonfigurasi. Atur di menu Pengaturan.';
+    canvas.style.display = 'none';
+    hint.textContent = qrisData ? 'QR library belum siap.' : '⚠️ QRIS belum diatur. Buka Pengaturan → QRIS.';
+    if (pulse) pulse.style.display = 'none';
+    if (confirmBtn) confirmBtn.style.display = 'none';
   }
+}
+
+// Konfirmasi manual QRIS oleh kasir
+async function confirmQRISPayment() {
+  const btn = document.getElementById('qris-confirm-btn');
+  if (btn) { btn.disabled=true; btn.textContent='Memproses...'; }
+  await processCheckout(true);
+  if (btn) { btn.disabled=false; btn.textContent='✅ Konfirmasi Pembayaran Diterima'; }
+}
+
+// ================================================================
+// NOTIFIKASI PEMBAYARAN MASUK
+// ================================================================
+function playNotifSound() {
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const notes = [523, 659, 784, 1047]; // C-E-G-C
+    notes.forEach((freq,i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, ctx.currentTime + i*0.12);
+      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i*0.12 + 0.02);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + i*0.12 + 0.18);
+      osc.start(ctx.currentTime + i*0.12);
+      osc.stop(ctx.currentTime + i*0.12 + 0.2);
+    });
+  } catch(e) {}
+}
+
+function showNotifPayment(amount, kasir, metode) {
+  playNotifSound();
+  document.getElementById('notif-amt').textContent = fmt(amount);
+  document.getElementById('notif-sub').textContent = (metode==='qris'?'📱 QRIS':'💵 Cash') + (kasir?' · '+kasir:'');
+  document.getElementById('notif-payment').classList.add('show');
+  document.getElementById('notif-bg').classList.add('show');
+  // Browser notification
+  if (Notification.permission === 'granted') {
+    new Notification('💳 Pembayaran Masuk!', {
+      body: fmt(amount) + ' via ' + (metode==='qris'?'QRIS':'Cash') + (kasir?' oleh '+kasir:''),
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">✅</text></svg>'
+    });
+  }
+  setTimeout(closeNotifPayment, 6000);
+}
+
+function closeNotifPayment() {
+  document.getElementById('notif-payment').classList.remove('show');
+  document.getElementById('notif-bg').classList.remove('show');
+}
+
+function testQRISNotif() {
+  showNotifPayment(75000, S.currentUser?.nama||'Kasir', 'qris');
+}
+
+// Request browser notification permission
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+// ================================================================
+// SUPABASE REALTIME — notif lintas device
+// ================================================================
+let _realtimeChannel = null;
+
+function initRealtimeNotif() {
+  if (!S.toko?.id) return;
+  if (_realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel=null; }
+  _realtimeChannel = sb.channel('tx_notif_'+S.toko.id)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'transaksi',
+      filter: `toko_id=eq.${S.toko.id}`
+    }, payload => {
+      const tx = payload.new;
+      // Jangan notif kalau transaksi dari kasir ini sendiri (sudah tampil via processCheckout)
+      if (tx.kasir_id === S.currentUser?.id) return;
+      showNotifPayment(tx.total, tx.kasir_nama, tx.pembayaran);
+      // Reload data
+      S.transaksi.unshift(tx);
+      if (document.getElementById('page-dashboard')?.classList.contains('on')) renderDashboard();
+    })
+    .subscribe();
 }
 
 function calcChange() {
@@ -1371,8 +1537,15 @@ function calcChange() {
   document.getElementById('co-btn').disabled=!S.cart.length||(S.payMethod==='cash'&&cash<tot);
 }
 
-async function processCheckout() {
+async function processCheckout(fromQRISConfirm=false) {
   if(!S.cart.length) return;
+  // QRIS: harus lewat tombol konfirmasi, bukan tombol utama
+  if(S.payMethod==='qris' && !fromQRISConfirm) {
+    const qd = getQRISData();
+    if (!qd) { toast('QRIS belum diatur di Pengaturan!','error'); return; }
+    renderQRIS();
+    return;
+  }
   const sub=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
   const dk=parseFloat(document.getElementById('dk-val').value)||0;
   const disc=S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
@@ -1416,7 +1589,14 @@ async function processCheckout() {
     S.cart=[];
     document.getElementById('cash-in').value='';
     document.getElementById('dk-val').value='';
+    // Reset QRIS UI
+    const qrisPulse = document.getElementById('qris-pulse-lbl');
+    const qrisConfirm = document.getElementById('qris-confirm-btn');
+    if (qrisPulse) qrisPulse.style.display='none';
+    if (qrisConfirm) qrisConfirm.style.display='none';
     renderCart(); renderPOS();
+    // Notif pembayaran masuk
+    showNotifPayment(tot, S.currentUser.nama, S.payMethod);
     toast('✅ Transaksi berhasil!','success');
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
@@ -1787,7 +1967,19 @@ function loadSettingsPage() {
   document.getElementById('set-alamat').value=S.toko.alamat||'';
   document.getElementById('set-telp').value=S.toko.telepon||'';
   document.getElementById('set-logo').value=S.toko.logo_emoji||'☕';
-  document.getElementById('set-qris').value=localStorage.getItem('qris_'+S.toko.id)||'';
+  const qrisVal = S.toko.qris_string || localStorage.getItem('qris_'+S.toko.id) || '';
+  document.getElementById('set-qris').value = qrisVal;
+  if (qrisVal) setTimeout(previewQRIS, 100);
+}
+
+function previewQRIS() {
+  const val = document.getElementById('set-qris').value.trim();
+  const wrap = document.getElementById('set-qris-preview');
+  const canvas = document.getElementById('set-qris-canvas');
+  if (!val || typeof QRCode==='undefined') { wrap.style.display='none'; return; }
+  QRCode.toCanvas(canvas, val, {width:160,margin:1,color:{dark:'#111',light:'#fff'}}, err => {
+    wrap.style.display = err ? 'none' : 'block';
+  });
 }
 
 async function saveSettingsToko() {
@@ -1806,11 +1998,22 @@ async function saveSettingsToko() {
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
 
-function saveSettingsQRIS() {
-  const qris=document.getElementById('set-qris').value.trim();
-  if(qris) localStorage.setItem('qris_'+S.toko.id,qris);
+async function saveSettingsQRIS() {
+  const qris = document.getElementById('set-qris').value.trim();
+  // Simpan ke localStorage (selalu)
+  if (qris) localStorage.setItem('qris_'+S.toko.id, qris);
   else localStorage.removeItem('qris_'+S.toko.id);
-  toast(qris?'QRIS disimpan!':'QRIS dihapus','success');
+  // Simpan ke Supabase DB (sync lintas device)
+  try {
+    await sb.from('toko').update({qris_string: qris||null}).eq('id', S.toko.id);
+    S.toko.qris_string = qris||null;
+    toast(qris ? '✅ QRIS disimpan & sync ke semua device!' : 'QRIS dihapus', 'success');
+  } catch(e) {
+    // Kolom belum ada di DB — fallback ke localStorage saja
+    S.toko.qris_string = qris||null;
+    toast(qris ? '✅ QRIS disimpan (lokal)' : 'QRIS dihapus', 'success');
+  }
+  if (qris) previewQRIS();
 }
 
 async function changePassword() {
