@@ -376,6 +376,12 @@ select.fi{appearance:none;cursor:pointer}
 .bk-lbl{color:var(--muted)}
 .bk-val{font-weight:700;font-family:'Sora',sans-serif}
 
+/* SHIFT BUTTON */
+.shift-btn{padding:4px 11px;border-radius:99px;font-size:.72rem;font-weight:700;border:1.5px solid;cursor:pointer;transition:all .18s;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px}
+.shift-btn.open{background:var(--green-p);border-color:var(--green);color:var(--green)}
+.shift-btn.closed{background:var(--red-p);border-color:var(--red);color:var(--red)}
+@media(max-width:640px){.shift-btn span.shift-txt{display:none}}
+
 /* MOBILE POS 2-COL */
 @media(max-width:768px){
   .pos-grid{grid-template-columns:repeat(2,1fr)!important}
@@ -566,6 +572,7 @@ select.fi{appearance:none;cursor:pointer}
         <div class="topbar-title" id="topbar-title">Kasir / POS</div>
       </div>
       <div class="topbar-right">
+        <button class="shift-btn closed" id="shift-btn" onclick="openShiftModal()">⏱ <span class="shift-txt">Buka Shift</span></button>
         <span class="tb-date-lbl" id="tb-date"></span>
         <div style="width:1px;height:18px;background:var(--border)"></div>
         <span class="clock" id="clock">00:00</span>
@@ -783,6 +790,22 @@ select.fi{appearance:none;cursor:pointer}
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- SHIFT MODAL -->
+<div class="overlay" id="shift-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hd"><div class="modal-title" id="shift-modal-title">Buka Shift</div><button class="modal-x" onclick="closeModal('shift-modal')">×</button></div>
+    <div id="shift-open-form">
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Masukkan jumlah uang tunai awal di laci kasir sebelum mulai berjualan.</p>
+      <div class="fg"><label class="fl">Modal Tunai Awal (Rp)</label><input class="fi" type="number" id="shift-modal-cash" placeholder="100000" min="0" onkeydown="if(event.key==='Enter')openShift()"></div>
+      <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('shift-modal')">Batal</button><button class="btn btn-green" onclick="openShift()">✅ Buka Shift</button></div>
+    </div>
+    <div id="shift-close-form" style="display:none">
+      <div id="shift-summary"></div>
+      <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('shift-modal')">Nanti</button><button class="btn btn-red" onclick="closeShift()">🔒 Tutup &amp; Cetak Laporan</button></div>
+    </div>
   </div>
 </div>
 
@@ -1278,6 +1301,7 @@ function initApp() {
   if(u.role==='owner') renderDashboard();
   updateNavBadges();
   updateClock();
+  updateShiftBtn();
   requestNotifPermission();
   initRealtimeNotif();
 }
@@ -2094,6 +2118,90 @@ async function changePassword() {
     document.getElementById('set-conf-pass').value='';
     loading(false);toast('Password berhasil diubah!','success');
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
+}
+
+// ================================================================
+// SHIFT MANAGEMENT
+// ================================================================
+function getShiftData() {
+  try { return JSON.parse(localStorage.getItem('shift_'+S.toko.id)||'null'); } catch(e) { return null; }
+}
+function saveShiftData(data) {
+  if(data) localStorage.setItem('shift_'+S.toko.id, JSON.stringify(data));
+  else localStorage.removeItem('shift_'+S.toko.id);
+}
+function updateShiftBtn() {
+  const shift = getShiftData();
+  const btn = document.getElementById('shift-btn');
+  if (!btn) return;
+  if (shift) {
+    btn.innerHTML = '⏱ <span class="shift-txt">'+shift.kasir_nama+' · '+shift.open_time+'</span>';
+    btn.className = 'shift-btn open';
+  } else {
+    btn.innerHTML = '⏱ <span class="shift-txt">Buka Shift</span>';
+    btn.className = 'shift-btn closed';
+  }
+}
+function openShiftModal() {
+  const shift = getShiftData();
+  document.getElementById('shift-open-form').style.display = shift ? 'none' : 'block';
+  document.getElementById('shift-close-form').style.display = shift ? 'block' : 'none';
+  document.getElementById('shift-modal-title').textContent = shift ? 'Laporan Shift' : 'Buka Shift';
+  if (shift) {
+    renderShiftSummary(shift);
+  } else {
+    document.getElementById('shift-modal-cash').value = '';
+  }
+  openModal('shift-modal');
+}
+function openShift() {
+  const modal = parseFloat(document.getElementById('shift-modal-cash').value)||0;
+  const data = {
+    kasir_id: S.currentUser.id,
+    kasir_nama: S.currentUser.nama,
+    open_time: nowStr(),
+    open_date: todayISO(),
+    modal_cash: modal,
+  };
+  saveShiftData(data);
+  updateShiftBtn();
+  closeModal('shift-modal');
+  toast('✅ Shift dibuka! Modal '+fmt(modal),'success');
+}
+function renderShiftSummary(shift) {
+  const shiftTx = S.transaksi.filter(t => {
+    if(t.tanggal < shift.open_date) return false;
+    if(t.tanggal === shift.open_date && shift.open_time && t.waktu < shift.open_time) return false;
+    return true;
+  });
+  const totalCash = shiftTx.filter(t=>t.pembayaran==='cash').reduce((s,t)=>s+t.total,0);
+  const totalQris = shiftTx.filter(t=>t.pembayaran==='qris').reduce((s,t)=>s+t.total,0);
+  const totalAll = shiftTx.reduce((s,t)=>s+t.total,0);
+  const expectedCash = shift.modal_cash + totalCash;
+  document.getElementById('shift-summary').innerHTML = `
+    <div class="card" style="margin-bottom:12px;padding:12px">
+      <div class="ir"><span class="lbl">Kasir</span><span class="val">${esc(shift.kasir_nama)}</span></div>
+      <div class="ir"><span class="lbl">Buka Shift</span><span class="val">${shift.open_date} ${shift.open_time}</span></div>
+      <div class="ir" style="border:none"><span class="lbl">Modal Tunai Awal</span><span class="val">${fmt(shift.modal_cash)}</span></div>
+    </div>
+    <div class="g2" style="margin-bottom:12px">
+      <div class="stat-tile"><div class="st-ico">🧾</div><div class="st-val">${shiftTx.length}</div><div class="st-lbl">Transaksi</div></div>
+      <div class="stat-tile"><div class="st-ico">💰</div><div class="st-val amber" style="font-size:1.05rem">${fmt(totalAll)}</div><div class="st-lbl">Total Omzet</div></div>
+      <div class="stat-tile"><div class="st-ico">💵</div><div class="st-val" style="font-size:1.05rem">${fmt(totalCash)}</div><div class="st-lbl">Cash Masuk</div></div>
+      <div class="stat-tile"><div class="st-ico">📱</div><div class="st-val" style="font-size:1.05rem">${fmt(totalQris)}</div><div class="st-lbl">QRIS</div></div>
+    </div>
+    <div style="background:var(--green-p);border:1px solid rgba(16,185,129,.25);border-radius:var(--rs);padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-size:.82rem;color:var(--green);font-weight:600">💵 Ekspektasi Cash di Laci</span>
+      <span style="font-family:'Sora',sans-serif;font-weight:800;color:var(--green)">${fmt(expectedCash)}</span>
+    </div>
+    <p style="font-size:.7rem;color:var(--muted)">Modal ${fmt(shift.modal_cash)} + Cash masuk ${fmt(totalCash)}</p>
+  `;
+}
+function closeShift() {
+  saveShiftData(null);
+  updateShiftBtn();
+  closeModal('shift-modal');
+  toast('🔒 Shift ditutup. Selamat istirahat!','info');
 }
 
 // ================================================================
