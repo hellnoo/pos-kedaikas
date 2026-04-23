@@ -594,6 +594,8 @@ select.fi{appearance:none;cursor:pointer}
             </div>
           </div>
           <div class="cart-disc" id="c-disc" style="display:none"><span>Potongan</span><span id="c-disc-val">- Rp 0</span></div>
+          <div class="cart-sub" id="c-svc-row" style="display:none"><span id="c-svc-lbl">Service (0%)</span><span id="c-svc">Rp 0</span></div>
+          <div class="cart-sub" id="c-tax-row" style="display:none"><span id="c-tax-lbl">Pajak (0%)</span><span id="c-tax">Rp 0</span></div>
           <div class="cart-tot"><span>Total</span><span id="c-tot">Rp 0</span></div>
           <div class="pay-btns">
             <button class="pay-btn on" id="pb-cash" onclick="setPayMethod('cash')">💵 Cash</button>
@@ -626,6 +628,7 @@ select.fi{appearance:none;cursor:pointer}
               </button>
             </div>
           </div>
+          <input class="fi" id="tx-note" placeholder="📝 Catatan pesanan... (opsional)" style="font-size:.77rem;margin-bottom:8px;padding:7px 10px">
           <button class="co-btn" id="co-btn" onclick="processCheckout()" disabled>Proses Bayar</button>
         </div>
       </div>
@@ -762,6 +765,16 @@ select.fi{appearance:none;cursor:pointer}
           </div>
           <p style="font-size:.7rem;color:var(--muted);margin-top:8px">💡 QRIS string bisa didapat dari aplikasi bank (BCA, BRI, BNI, GoPay, OVO, dll) — pilih <em>Terima QRIS</em> lalu copy string-nya.</p>
         </div>
+        <div class="set-section">
+          <div class="set-section-title">🧾 Pajak &amp; Biaya Layanan</div>
+          <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Dikenakan otomatis setelah diskon. Isi 0 untuk menonaktifkan.</p>
+          <div class="g2">
+            <div class="fg"><label class="fl">Service Charge (%)</label><input class="fi" type="number" id="set-svc" placeholder="0" min="0" max="100" step="0.5"></div>
+            <div class="fg"><label class="fl">Pajak / PPN (%)</label><input class="fi" type="number" id="set-tax" placeholder="0" min="0" max="100" step="0.5"></div>
+          </div>
+          <button class="btn btn-amber" onclick="saveSettingsTaxSvc()">💾 Simpan</button>
+          <p style="font-size:.7rem;color:var(--muted);margin-top:8px">💡 Contoh: Service 5% + PPN 11% = tagihan pelanggan lebih tinggi dari harga menu. Sudah masuk di struk otomatis.</p>
+        </div>
         <div class="set-section" style="border-color:rgba(239,68,68,.25)">
           <div class="set-section-title" style="color:var(--red)">⚠️ Ganti Toko</div>
           <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Pindah ke toko lain atau reset perangkat ini. Data toko lama tidak hilang, tapi kamu perlu setup ulang di perangkat ini.</p>
@@ -885,6 +898,8 @@ let S = {
   lapPeriod: 'harian',
   editResepMenuId: null,
   diskonType: 'nominal', // 'nominal' | 'persen'
+  taxPersen: 0,
+  svcPersen: 0,
 };
 
 // ================================================================
@@ -1252,6 +1267,12 @@ function initApp() {
   const ownerOnly=['nav-owner-sec','nav-db','nav-lap','nav-menu','nav-stok','nav-resep','nav-pg','nav-set'];
   ownerOnly.forEach(id=>document.getElementById(id).style.display=u.role==='owner'?'':'none');
 
+  // Load persisted settings
+  try {
+    const ts = JSON.parse(localStorage.getItem('taxsvc_'+S.toko.id)||'{}');
+    S.taxPersen = ts.tax||0;
+    S.svcPersen = ts.svc||0;
+  } catch(e) {}
   showScreen('app');
   renderPOS();
   if(u.role==='owner') renderDashboard();
@@ -1354,6 +1375,8 @@ function removeFromCart(menuId) {
 function clearCart(){
   S.cart=[];
   document.getElementById('dk-val').value='';
+  const noteEl=document.getElementById('tx-note');
+  if(noteEl) noteEl.value='';
   renderCart();
 }
 
@@ -1411,10 +1434,7 @@ function renderQRIS() {
   const amtLbl = document.getElementById('qris-amount-lbl');
 
   // Tampilkan nominal
-  const sub = S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
-  const dk = parseFloat(document.getElementById('dk-val').value)||0;
-  const disc = S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
-  const tot = Math.max(0,sub-disc);
+  const {tot} = calcTotals();
   if (amtLbl) amtLbl.textContent = tot > 0 ? fmt(tot) : '';
 
   if (qrisData && typeof QRCode !== 'undefined') {
@@ -1521,14 +1541,27 @@ function initRealtimeNotif() {
     .subscribe();
 }
 
-function calcChange() {
+function calcTotals() {
   const sub=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
   const dk=parseFloat(document.getElementById('dk-val').value)||0;
   const disc=S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
-  const tot=Math.max(0,sub-disc);
+  const afterDisc=Math.max(0,sub-disc);
+  const svc=Math.round(afterDisc*(S.svcPersen||0)/100);
+  const tax=Math.round((afterDisc+svc)*(S.taxPersen||0)/100);
+  const tot=afterDisc+svc+tax;
+  return {sub,disc,afterDisc,svc,tax,tot};
+}
+
+function calcChange() {
+  const {sub,disc,svc,tax,tot}=calcTotals();
+  document.getElementById('c-sub').textContent=fmt(sub);
   const discEl=document.getElementById('c-disc');
   if(disc>0){discEl.style.display='flex';document.getElementById('c-disc-val').textContent='- '+fmt(disc);}
   else discEl.style.display='none';
+  const svcRow=document.getElementById('c-svc-row');
+  if(svcRow){svcRow.style.display=svc>0?'flex':'none';document.getElementById('c-svc').textContent=fmt(svc);document.getElementById('c-svc-lbl').textContent=`Service (${S.svcPersen}%)`;}
+  const taxRow=document.getElementById('c-tax-row');
+  if(taxRow){taxRow.style.display=tax>0?'flex':'none';document.getElementById('c-tax').textContent=fmt(tax);document.getElementById('c-tax-lbl').textContent=`Pajak (${S.taxPersen}%)`;}
   document.getElementById('c-tot').textContent=fmt(tot);
   const cash=parseInt(document.getElementById('cash-in').value)||0;
   const chg=cash-tot;
@@ -1546,13 +1579,11 @@ async function processCheckout(fromQRISConfirm=false) {
     renderQRIS();
     return;
   }
-  const sub=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
-  const dk=parseFloat(document.getElementById('dk-val').value)||0;
-  const disc=S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
-  const tot=Math.max(0,sub-disc);
+  const {sub,disc,svc,tax,tot}=calcTotals();
   const totHpp=S.cart.reduce((s,i)=>s+(i.hpp||0)*i.qty,0);
   const cash=parseInt(document.getElementById('cash-in').value)||tot;
   const chg=S.payMethod==='cash'?cash-tot:0;
+  const note=document.getElementById('tx-note')?.value.trim()||'';
 
   loading(true,'Menyimpan transaksi...');
   try {
@@ -1575,9 +1606,11 @@ async function processCheckout(fromQRISConfirm=false) {
       toko_id:S.toko.id,
       tanggal:todayISO(),waktu:nowStr(),
       items:S.cart.map(i=>({...i})),
+      sub_total:sub,diskon:disc,service_charge:svc,pajak:tax,
       total:tot,total_hpp:totHpp,laba:tot-totHpp,
       pembayaran:S.payMethod,uang_diterima:cash,kembalian:chg,
       kasir_id:S.currentUser.id,kasir_nama:S.currentUser.nama,
+      catatan:note||null,
     };
     const {data,error}=await sb.from('transaksi').insert(tx).select().single();
     if(error) throw error;
@@ -1585,10 +1618,11 @@ async function processCheckout(fromQRISConfirm=false) {
 
     loading(false);
     const nomorTrx=`TRX-${todayISO().replace(/-/g,'')}-${String(S.transaksi.filter(t=>t.tanggal===todayISO()).length).padStart(3,'0')}`;
-    showStruk({...tx,id:data.id,sub,disc,nomorTrx});
+    showStruk({...tx,id:data.id,sub,disc,svc,tax,nomorTrx});
     S.cart=[];
     document.getElementById('cash-in').value='';
     document.getElementById('dk-val').value='';
+    document.getElementById('tx-note').value='';
     // Reset QRIS UI
     const qrisPulse = document.getElementById('qris-pulse-lbl');
     const qrisConfirm = document.getElementById('qris-confirm-btn');
@@ -1615,9 +1649,12 @@ function showStruk(tx) {
       ${tx.items.map(i=>`<div class="struk-row"><span>${i.nama} ×${i.qty}</span><span>${fmt(i.harga*i.qty)}</span></div>`).join('')}
       <div class="struk-line"></div>
       ${tx.sub!=null&&tx.disc>0?`<div class="struk-row"><span>Subtotal</span><span>${fmt(tx.sub)}</span></div><div class="struk-row"><span>Diskon</span><span>- ${fmt(tx.disc)}</span></div>`:''}
+      ${(tx.svc||tx.service_charge)>0?`<div class="struk-row"><span>Service Charge</span><span>${fmt(tx.svc||tx.service_charge)}</span></div>`:''}
+      ${(tx.tax||tx.pajak)>0?`<div class="struk-row"><span>Pajak/PPN</span><span>${fmt(tx.tax||tx.pajak)}</span></div>`:''}
       <div class="struk-total"><span>Total</span><span>${fmt(tx.total)}</span></div>
       <div class="struk-row" style="margin-top:5px"><span>Bayar (${tx.pembayaran==='cash'?'Cash':'QRIS'})</span><span>${fmt(tx.uang_diterima)}</span></div>
       ${tx.pembayaran==='cash'?`<div class="struk-row"><span>Kembalian</span><span>${fmt(tx.kembalian)}</span></div>`:''}
+      ${tx.catatan?`<div class="struk-line"></div><div class="struk-row" style="font-style:italic;color:#555"><span>📝 Catatan:</span><span>${esc(tx.catatan)}</span></div>`:''}
       <div class="struk-line"></div>
       <div class="struk-footer">Terima kasih telah berkunjung! 😊</div>
     </div>`;
@@ -1970,6 +2007,7 @@ function loadSettingsPage() {
   const qrisVal = S.toko.qris_string || localStorage.getItem('qris_'+S.toko.id) || '';
   document.getElementById('set-qris').value = qrisVal;
   if (qrisVal) setTimeout(previewQRIS, 100);
+  loadTaxSvcSettings();
 }
 
 function previewQRIS() {
@@ -1996,6 +2034,28 @@ async function saveSettingsToko() {
     document.getElementById('sb-store-ico').textContent=logo;
     loading(false);toast('Informasi toko disimpan!','success');
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
+}
+
+function loadTaxSvcSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('taxsvc_'+S.toko.id)||'{}');
+    S.taxPersen = s.tax||0;
+    S.svcPersen = s.svc||0;
+  } catch(e) { S.taxPersen=0; S.svcPersen=0; }
+  const taxEl = document.getElementById('set-tax');
+  const svcEl = document.getElementById('set-svc');
+  if(taxEl) taxEl.value = S.taxPersen||'';
+  if(svcEl) svcEl.value = S.svcPersen||'';
+}
+
+function saveSettingsTaxSvc() {
+  const tax = Math.max(0, Math.min(100, parseFloat(document.getElementById('set-tax').value)||0));
+  const svc = Math.max(0, Math.min(100, parseFloat(document.getElementById('set-svc').value)||0));
+  S.taxPersen = tax;
+  S.svcPersen = svc;
+  localStorage.setItem('taxsvc_'+S.toko.id, JSON.stringify({tax, svc}));
+  toast(`Pajak ${tax}% + Service ${svc}% disimpan!`, 'success');
+  calcChange();
 }
 
 async function saveSettingsQRIS() {
@@ -2040,10 +2100,7 @@ async function changePassword() {
 // QUICK CASH
 // ================================================================
 function setQuickCash(n) {
-  const sub = S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
-  const dk = parseFloat(document.getElementById('dk-val').value)||0;
-  const disc = S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
-  const tot = Math.max(0,sub-disc);
+  const {tot} = calcTotals();
   const val = n==='pas' ? tot : n;
   document.getElementById('cash-in').value = val;
   calcChange();
@@ -2073,7 +2130,10 @@ function showReprintStruk(id) {
   if (!t) { toast('Data tidak ditemukan','error'); return; }
   const nomorTrx = `TRX-${(t.tanggal||'').replace(/-/g,'')}-${id.slice(0,4).toUpperCase()}`;
   const sub = t.items ? t.items.reduce((s,i)=>s+(i.harga||0)*(i.qty||1),0) : t.total;
-  showStruk({...t, sub, disc: Math.max(0, sub - t.total), nomorTrx});
+  const svc = t.service_charge||0;
+  const tax = t.pajak||0;
+  const disc = Math.max(0, sub+svc+tax - t.total);
+  showStruk({...t, sub, disc, svc, tax, nomorTrx});
 }
 
 // ================================================================
