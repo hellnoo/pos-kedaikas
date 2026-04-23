@@ -59,6 +59,12 @@ create table if not exists resep (
 );
 
 -- TRANSAKSI
+-- Jalankan migration premium (supabase/migrations/002_premium_qris.sql) untuk kolom tambahan:
+-- ALTER TABLE toko ADD COLUMN is_premium BOOLEAN DEFAULT FALSE;
+-- ALTER TABLE toko ADD COLUMN moota_bank_id TEXT;
+-- ALTER TABLE toko ADD COLUMN qris_string TEXT;
+-- CREATE TABLE pending_qris (...) — lihat file migration
+
 create table if not exists transaksi (
   id uuid default gen_random_uuid() primary key,
   toko_id uuid references toko(id) on delete cascade,

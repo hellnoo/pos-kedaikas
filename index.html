@@ -376,6 +376,16 @@ select.fi{appearance:none;cursor:pointer}
 .bk-lbl{color:var(--muted)}
 .bk-val{font-weight:700;font-family:'Sora',sans-serif}
 
+/* PREMIUM */
+.prem-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#000;font-size:.58rem;font-weight:800;padding:2px 7px;border-radius:99px;letter-spacing:.5px;text-transform:uppercase;vertical-align:middle;margin-left:5px}
+.feature-locked{position:relative;pointer-events:none;user-select:none;filter:blur(2px);opacity:.45}
+.lock-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;z-index:10;pointer-events:auto;filter:none;opacity:1;backdrop-filter:blur(2px);border-radius:var(--r)}
+.lock-overlay-box{background:var(--bg2);border:1px solid var(--amber);border-radius:14px;padding:18px 22px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.prem-set-section{border-color:rgba(245,158,11,.4)!important;background:linear-gradient(135deg,rgba(245,158,11,.04),transparent)}
+.qris-unique-amt{font-family:'Sora',sans-serif;font-size:.82rem;color:var(--muted2);margin-bottom:6px}
+.qris-unique-chip{display:inline-flex;align-items:center;gap:6px;background:var(--amber-p);border:1.5px solid var(--amber);border-radius:var(--rs);padding:7px 14px;font-family:'Sora',sans-serif;font-size:1.05rem;font-weight:800;color:var(--amber);margin-bottom:8px}
+.qris-auto-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:99px;padding:4px 12px;font-size:.72rem;color:var(--green);font-weight:600}
+
 /* SHIFT BUTTON */
 .shift-btn{padding:4px 11px;border-radius:99px;font-size:.72rem;font-weight:700;border:1.5px solid;cursor:pointer;transition:all .18s;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px}
 .shift-btn.open{background:var(--green-p);border-color:var(--green);color:var(--green)}
@@ -540,7 +550,7 @@ select.fi{appearance:none;cursor:pointer}
   <div class="mob-overlay" id="mob-ov" onclick="closeSidebar()"></div>
   <aside class="sidebar" id="sidebar">
     <div class="sb-brand"><div class="sb-logo">KedaiKas<small>UMKM Nusantara</small></div></div>
-    <div class="sb-store"><div class="sb-store-name"><span id="sb-store-ico">☕</span><span id="sb-store-name">—</span></div></div>
+    <div class="sb-store"><div class="sb-store-name"><span id="sb-store-ico">☕</span><span id="sb-store-name">—</span><span class="prem-badge" id="prem-badge" style="display:none">⭐ PRO</span></div></div>
     <div class="sb-user">
       <div class="sb-avatar" id="sb-av">?</div>
       <div><div class="sb-uname" id="sb-uname">—</div><div class="sb-urole" id="sb-urole">—</div></div>
@@ -623,8 +633,16 @@ select.fi{appearance:none;cursor:pointer}
           </div>
           <div id="qris-wrap" style="display:none">
             <div class="qris-waiting">
+              <!-- PREMIUM: nominal unik -->
+              <div id="qris-unique-wrap" style="display:none">
+                <div class="qris-unique-amt">Minta pelanggan bayar TEPAT:</div>
+                <div class="qris-unique-chip">💳 <span id="qris-unique-amt-lbl">Rp 0</span></div>
+                <div style="font-size:.68rem;color:var(--muted);margin-bottom:8px">Nominal unik — beda tiap transaksi agar auto-terdeteksi</div>
+                <div class="qris-auto-badge" id="qris-auto-badge">⚡ Menunggu konfirmasi Moota...</div>
+              </div>
+              <!-- NON-PREMIUM: nominal biasa -->
               <div class="qris-amount" id="qris-amount-lbl"></div>
-              <div class="qris-scan-hint">Minta pelanggan scan QR di bawah</div>
+              <div class="qris-scan-hint" id="qris-scan-hint-lbl">Minta pelanggan scan QR di bawah</div>
               <div class="qris-box">
                 <canvas id="qris-canvas"></canvas>
                 <p class="qris-hint" id="qris-hint"></p>
@@ -771,6 +789,52 @@ select.fi{appearance:none;cursor:pointer}
             <button class="btn btn-ghost" onclick="testQRISNotif()">🔔 Test Notifikasi</button>
           </div>
           <p style="font-size:.7rem;color:var(--muted);margin-top:8px">💡 QRIS string bisa didapat dari aplikasi bank (BCA, BRI, BNI, GoPay, OVO, dll) — pilih <em>Terima QRIS</em> lalu copy string-nya.</p>
+        </div>
+
+        <!-- PREMIUM QRIS REALTIME -->
+        <div class="set-section prem-set-section" style="position:relative" id="prem-qris-section">
+          <div class="set-section-title">⚡ QRIS Real-time <span class="prem-badge">⭐ PRO</span></div>
+          <!-- NON-PREMIUM: lock overlay -->
+          <div class="lock-overlay" id="prem-lock-overlay">
+            <div class="lock-overlay-box">
+              <div style="font-size:2rem;margin-bottom:8px">🔒</div>
+              <div style="font-family:'Sora',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:4px">Fitur Premium</div>
+              <div style="font-size:.76rem;color:var(--muted);margin-bottom:14px;max-width:220px">QRIS otomatis terkonfirmasi saat pelanggan bayar — tanpa tombol manual</div>
+              <button class="btn btn-amber" style="font-size:.8rem" onclick="toast('Hubungi kami via WhatsApp untuk upgrade Premium!','info')">⭐ Upgrade Premium</button>
+            </div>
+          </div>
+          <!-- PREMIUM CONTENT (blurred kalau non-premium) -->
+          <div id="prem-qris-content">
+            <div style="background:var(--green-p);border:1px solid rgba(16,185,129,.25);border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:1rem">✅</span>
+              <span id="prem-status-txt" style="font-size:.8rem;color:var(--green);font-weight:600">Moota terhubung — QRIS auto-konfirmasi aktif</span>
+            </div>
+            <div class="fg">
+              <label class="fl">Webhook URL (paste ke Moota Settings → Webhook)</label>
+              <div style="display:flex;gap:6px">
+                <input class="fi" id="prem-webhook-url" readonly style="font-size:.72rem;background:var(--bg3);cursor:text">
+                <button class="btn btn-ghost btn-sm" onclick="copyWebhookURL()" style="flex-shrink:0">📋 Copy</button>
+              </div>
+            </div>
+            <div class="fg">
+              <label class="fl">Webhook Secret Token</label>
+              <div style="display:flex;gap:6px">
+                <input class="fi" type="password" id="prem-webhook-secret" placeholder="Buat token acak, isi sama di Moota & di sini" style="font-size:.82rem">
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('prem-webhook-secret').type=document.getElementById('prem-webhook-secret').type==='password'?'text':'password'" style="flex-shrink:0">👁</button>
+              </div>
+            </div>
+            <button class="btn btn-amber" onclick="savePremiumSettings()">💾 Simpan</button>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+              <div style="font-size:.74rem;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Panduan Setup Moota</div>
+              <div style="font-size:.76rem;color:var(--muted2);line-height:1.85">
+                1. Daftar di <strong style="color:var(--text)">moota.co</strong> → Tambah Rekening (pilih bank kamu)<br>
+                2. Di Moota: <strong style="color:var(--text)">Settings → Webhook</strong> → paste URL di atas<br>
+                3. Isi kolom <em>Secret Token</em> di Moota → isi yang sama di sini<br>
+                4. Deploy Edge Function (lihat README di repo)<br>
+                5. Selesai — QRIS langsung auto-konfirmasi saat ada bayaran masuk 🎉
+              </div>
+            </div>
+          </div>
         </div>
         <div class="set-section">
           <div class="set-section-title">🧾 Pajak &amp; Biaya Layanan</div>
@@ -923,6 +987,8 @@ let S = {
   diskonType: 'nominal', // 'nominal' | 'persen'
   taxPersen: 0,
   svcPersen: 0,
+  pendingQRISId: null,
+  pendingQRISUniqueAmt: 0,
 };
 
 // ================================================================
@@ -1302,8 +1368,10 @@ function initApp() {
   updateNavBadges();
   updateClock();
   updateShiftBtn();
+  updatePremiumUI();
   requestNotifPermission();
   initRealtimeNotif();
+  initPremiumQRISRealtime();
 }
 
 function updateClock() {
@@ -1397,6 +1465,7 @@ function removeFromCart(menuId) {
   renderCart();
 }
 function clearCart(){
+  clearPendingQRIS();
   S.cart=[];
   document.getElementById('dk-val').value='';
   const noteEl=document.getElementById('tx-note');
@@ -1429,6 +1498,7 @@ function toggleDiskonType() {
 }
 
 function setPayMethod(m) {
+  if(m==='cash') clearPendingQRIS();
   S.payMethod=m;
   document.getElementById('pb-cash').classList.toggle('on',m==='cash');
   document.getElementById('pb-qris').classList.toggle('on',m==='qris');
@@ -1449,36 +1519,81 @@ function getQRISData() {
   return S.toko.qris_string || localStorage.getItem('qris_'+S.toko.id) || '';
 }
 
-function renderQRIS() {
+async function renderQRIS() {
   const qrisData = getQRISData();
-  const canvas = document.getElementById('qris-canvas');
-  const hint = document.getElementById('qris-hint');
-  const pulse = document.getElementById('qris-pulse-lbl');
-  const confirmBtn = document.getElementById('qris-confirm-btn');
-  const amtLbl = document.getElementById('qris-amount-lbl');
+  const canvas    = document.getElementById('qris-canvas');
+  const hint      = document.getElementById('qris-hint');
+  const pulse     = document.getElementById('qris-pulse-lbl');
+  const confirmBtn= document.getElementById('qris-confirm-btn');
+  const amtLbl    = document.getElementById('qris-amount-lbl');
+  const uniqueWrap= document.getElementById('qris-unique-wrap');
+  const hintLbl   = document.getElementById('qris-scan-hint-lbl');
 
-  // Tampilkan nominal
   const {tot} = calcTotals();
-  if (amtLbl) amtLbl.textContent = tot > 0 ? fmt(tot) : '';
+  const prem = isPremium();
+
+  if (prem) {
+    // PREMIUM: nominal unik + auto-confirm via Moota
+    if (amtLbl) amtLbl.style.display = 'none';
+    if (hintLbl) hintLbl.textContent = 'Minta pelanggan bayar TEPAT nominal di atas, lalu scan QR:';
+    if (uniqueWrap) uniqueWrap.style.display = 'block';
+
+    // Buat suffix unik hanya sekali per tampilan QR
+    if (!S.pendingQRISId) {
+      const suffix = getUniqueSuffix();
+      const uniqueAmt = tot + suffix;
+      S.pendingQRISUniqueAmt = uniqueAmt;
+      document.getElementById('qris-unique-amt-lbl').textContent = fmt(uniqueAmt);
+
+      // Insert pending_qris ke Supabase
+      try {
+        const { data: p } = await sb.from('pending_qris').insert({
+          toko_id: S.toko.id, kasir_id: S.currentUser.id, kasir_nama: S.currentUser.nama,
+          amount: tot, unique_amount: uniqueAmt,
+          cart_items: S.cart.map(i=>({...i})),
+          total_hpp: S.cart.reduce((s,i)=>s+(i.hpp||0)*i.qty, 0),
+          status: 'pending',
+        }).select().single();
+        if (p) S.pendingQRISId = p.id;
+      } catch(e) { console.warn('pending_qris insert:', e.message); }
+    } else {
+      // Re-render: pakai unique amt yang sudah ada
+      document.getElementById('qris-unique-amt-lbl').textContent = fmt(S.pendingQRISUniqueAmt);
+    }
+
+    // Tombol konfirmasi jadi fallback
+    if (confirmBtn) {
+      confirmBtn.style.display = 'block';
+      confirmBtn.textContent = '🔄 Konfirmasi Manual (fallback)';
+    }
+    if (pulse) pulse.style.display = 'none';
+
+  } else {
+    // NON-PREMIUM: nominal biasa + manual confirm
+    if (amtLbl) { amtLbl.style.display='block'; amtLbl.textContent = tot > 0 ? fmt(tot) : ''; }
+    if (uniqueWrap) uniqueWrap.style.display = 'none';
+    if (hintLbl) hintLbl.textContent = 'Minta pelanggan scan QR di bawah';
+  }
 
   if (qrisData && typeof QRCode !== 'undefined') {
     canvas.style.display = 'block';
     QRCode.toCanvas(canvas, qrisData, {width:185,margin:1,color:{dark:'#111111',light:'#ffffff'}}, err => {
       if (err) { canvas.style.display='none'; hint.textContent='Gagal render QR code.'; return; }
       hint.textContent = 'Scan QR · ' + (S.toko.nama||'');
-      if (pulse) { pulse.style.display='inline-flex'; }
-      if (confirmBtn) { confirmBtn.style.display='block'; }
+      if (!prem && pulse) pulse.style.display='inline-flex';
+      if (!prem && confirmBtn) confirmBtn.style.display='block';
     });
   } else {
     canvas.style.display = 'none';
     hint.textContent = qrisData ? 'QR library belum siap.' : '⚠️ QRIS belum diatur. Buka Pengaturan → QRIS.';
     if (pulse) pulse.style.display = 'none';
-    if (confirmBtn) confirmBtn.style.display = 'none';
+    if (!prem && confirmBtn) confirmBtn.style.display = 'none';
   }
 }
 
-// Konfirmasi manual QRIS oleh kasir
+// Konfirmasi manual QRIS (non-premium atau fallback premium)
 async function confirmQRISPayment() {
+  clearPendingQRIS();
   const btn = document.getElementById('qris-confirm-btn');
   if (btn) { btn.disabled=true; btn.textContent='Memproses...'; }
   await processCheckout(true);
@@ -1549,20 +1664,143 @@ function initRealtimeNotif() {
   if (_realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel=null; }
   _realtimeChannel = sb.channel('tx_notif_'+S.toko.id)
     .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'transaksi',
+      event: 'INSERT', schema: 'public', table: 'transaksi',
       filter: `toko_id=eq.${S.toko.id}`
     }, payload => {
       const tx = payload.new;
-      // Jangan notif kalau transaksi dari kasir ini sendiri (sudah tampil via processCheckout)
-      if (tx.kasir_id === S.currentUser?.id) return;
+      // Transaksi dari kasir ini sendiri: tambah ke list tapi jangan notif
+      // (notif sudah via handlePremiumQRISConfirmed atau processCheckout langsung)
+      if (tx.kasir_id === S.currentUser?.id) {
+        if (!S.transaksi.find(t=>t.id===tx.id)) S.transaksi.unshift(tx);
+        if (document.getElementById('page-dashboard')?.classList.contains('on')) renderDashboard();
+        return;
+      }
       showNotifPayment(tx.total, tx.kasir_nama, tx.pembayaran);
-      // Reload data
       S.transaksi.unshift(tx);
       if (document.getElementById('page-dashboard')?.classList.contains('on')) renderDashboard();
     })
     .subscribe();
+}
+
+// ================================================================
+// PREMIUM SYSTEM
+// ================================================================
+function isPremium() {
+  return !!(S.toko?.is_premium || localStorage.getItem('prem_'+S.toko?.id));
+}
+
+let _premChannel = null;
+
+function initPremiumQRISRealtime() {
+  if (!isPremium() || !S.toko?.id) return;
+  if (_premChannel) { sb.removeChannel(_premChannel); _premChannel=null; }
+  _premChannel = sb.channel('pqris_'+S.toko.id)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'pending_qris',
+      filter: `toko_id=eq.${S.toko.id}`
+    }, payload => {
+      const row = payload.new;
+      if (row.status === 'confirmed' && row.id === S.pendingQRISId) {
+        handlePremiumQRISConfirmed(row);
+      }
+    })
+    .subscribe();
+}
+
+async function handlePremiumQRISConfirmed(row) {
+  S.pendingQRISId = null;
+  S.pendingQRISUniqueAmt = 0;
+  // Ambil transaksi yang baru diinsert Edge Function
+  const { data: tx } = await sb.from('transaksi')
+    .select('*').eq('toko_id', S.toko.id)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (tx) { S.transaksi.unshift(tx); }
+  if (document.getElementById('page-dashboard')?.classList.contains('on')) renderDashboard();
+  // Reset POS
+  S.cart = [];
+  ['cash-in','dk-val','tx-note'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  // Reset QRIS UI
+  document.getElementById('qris-wrap').style.display = 'none';
+  document.getElementById('qris-unique-wrap').style.display = 'none';
+  setPayMethod('cash');
+  renderCart(); renderPOS();
+  // Notif
+  playNotifSound();
+  const notifEl = document.getElementById('notif-payment');
+  const amtEl   = document.getElementById('notif-amt');
+  const subEl   = document.getElementById('notif-sub');
+  if (amtEl) amtEl.textContent = fmt(row.amount);
+  if (subEl) subEl.textContent = '⚡ QRIS Auto-terkonfirmasi via Moota';
+  if (notifEl) notifEl.classList.add('show');
+  document.getElementById('notif-bg')?.classList.add('show');
+  setTimeout(closeNotifPayment, 7000);
+  if (Notification.permission === 'granted') {
+    new Notification('⚡ QRIS Otomatis!', {
+      body: fmt(row.amount) + ' via QRIS — dikonfirmasi Moota',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⚡</text></svg>'
+    });
+  }
+}
+
+// Suffix unik per sesi (1-99), hindari duplikat
+const _usedSuffixes = new Set();
+function getUniqueSuffix() {
+  let s;
+  let tries = 0;
+  do { s = Math.floor(Math.random()*99)+1; tries++; } while (_usedSuffixes.has(s) && tries < 200);
+  _usedSuffixes.add(s);
+  setTimeout(() => _usedSuffixes.delete(s), 35*60*1000);
+  return s;
+}
+
+function clearPendingQRIS() {
+  if (S.pendingQRISId) {
+    sb.from('pending_qris').update({status:'expired'}).eq('id', S.pendingQRISId).then(()=>{});
+    S.pendingQRISId = null;
+    S.pendingQRISUniqueAmt = 0;
+  }
+}
+
+function updatePremiumUI() {
+  const prem = isPremium();
+  document.getElementById('prem-badge').style.display = prem ? 'inline-flex' : 'none';
+  const lockEl    = document.getElementById('prem-lock-overlay');
+  const contentEl = document.getElementById('prem-qris-content');
+  if (lockEl)    lockEl.style.display    = prem ? 'none' : 'flex';
+  if (contentEl) contentEl.className     = prem ? '' : 'feature-locked';
+  // Isi webhook URL
+  const urlEl = document.getElementById('prem-webhook-url');
+  if (urlEl) urlEl.value = SUPABASE_URL + '/functions/v1/moota-webhook?token=YOUR_SECRET';
+}
+
+function copyWebhookURL() {
+  const el = document.getElementById('prem-webhook-url');
+  if (!el) return;
+  navigator.clipboard.writeText(el.value).then(()=>toast('URL disalin!','success')).catch(()=>{
+    el.select(); document.execCommand('copy'); toast('URL disalin!','success');
+  });
+}
+
+function savePremiumSettings() {
+  const secret = document.getElementById('prem-webhook-secret')?.value.trim();
+  if (secret) localStorage.setItem('moota_secret_'+S.toko.id, secret);
+  toast('Pengaturan premium disimpan!','success');
+}
+
+function loadPremiumSettingsPage() {
+  updatePremiumUI();
+  const secret = localStorage.getItem('moota_secret_'+S.toko.id)||'';
+  const secretEl = document.getElementById('prem-webhook-secret');
+  if (secretEl) secretEl.value = secret;
+  // Update status text
+  const statusEl = document.getElementById('prem-status-txt');
+  if (statusEl) {
+    const secret2 = localStorage.getItem('moota_secret_'+S.toko.id);
+    statusEl.textContent = secret2
+      ? '✅ Moota terhubung — QRIS auto-konfirmasi aktif'
+      : '⚠️ Belum dikonfigurasi — isi Webhook Secret di bawah';
+    statusEl.style.color = secret2 ? 'var(--green)' : 'var(--amber)';
+  }
 }
 
 function calcTotals() {
@@ -2032,6 +2270,7 @@ function loadSettingsPage() {
   document.getElementById('set-qris').value = qrisVal;
   if (qrisVal) setTimeout(previewQRIS, 100);
   loadTaxSvcSettings();
+  loadPremiumSettingsPage();
 }
 
 function previewQRIS() {
