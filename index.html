@@ -865,6 +865,14 @@ select.fi{appearance:none;cursor:pointer}
         <div id="sm-cost-hint" style="font-size:.7rem;color:var(--muted);margin-top:4px"></div>
       </div>
     </div>
+    <div class="fg" id="sm-gramasi-wrap" style="display:none">
+      <label class="fl" id="sm-gramasi-label">Isi per pcs (gram)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="fi" type="number" id="sm-gramasi" placeholder="mis. 490" style="flex:1" oninput="updateCostHint()">
+        <span id="sm-gramasi-unit" style="font-size:.78rem;color:var(--muted);white-space:nowrap">gram/pcs</span>
+      </div>
+      <div id="sm-gramasi-hint" style="font-size:.7rem;color:var(--accent);margin-top:4px"></div>
+    </div>
     <input type="hidden" id="sm-eid">
     <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('stok-modal')">Batal</button><button class="btn btn-amber" onclick="saveStok()">Simpan</button></div>
   </div>
@@ -1476,7 +1484,7 @@ function renderPOS() {
     let stokLabel='';
     if(!ok){ stokLabel=`<div class="mt-stk-out">Stok habis</div>`; }
     else if(ings.length){
-      const minPorsi=Math.min(...ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?Math.floor(b.stok/r.qty):999;}));
+      const minPorsi=Math.min(...ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?Math.floor(b.stok/resepQtyToStok(b,r.qty)):999;}));
       stokLabel=minPorsi<=5&&minPorsi>0
         ?`<div class="mt-stk-warn">Sisa ~${minPorsi}</div>`
         :`<div class="mt-stk-ok">~${minPorsi} porsi</div>`;
@@ -1495,7 +1503,7 @@ function setPOSCat(c){posActiveCat=c;renderPOS();}
 function canMake(menuId) {
   const ings=S.resep.filter(r=>r.menu_id===menuId);
   if(!ings.length) return true;
-  return ings.every(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b&&b.stok>=r.qty;});
+  return ings.every(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b&&b.stok>=resepQtyToStok(b,r.qty);});
 }
 
 function addToCart(menuId) {
@@ -1505,7 +1513,7 @@ function addToCart(menuId) {
   const ings=S.resep.filter(r=>r.menu_id===menuId);
   const newQty=(S.cart.find(i=>i.menuId===menuId)?.qty||0)+1;
   if(ings.length) {
-    const short=ings.find(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b&&b.stok<r.qty*newQty;});
+    const short=ings.find(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b&&b.stok<resepQtyToStok(b,r.qty)*newQty;});
     if(short){ const b=S.bahan.find(x=>x.id===short.bahan_id); toast(`⚠️ Stok ${b?.nama||''} tidak cukup untuk ${newQty} porsi`,'error'); return; }
   }
   const ex=S.cart.find(i=>i.menuId===menuId);
@@ -1735,7 +1743,7 @@ async function processCheckout(fromQRISConfirm=false) {
     const ings=S.resep.filter(r=>r.menu_id===item.menuId);
     for(const ing of ings) {
       const b=S.bahan.find(x=>x.id===ing.bahan_id);
-      if(b && b.stok < ing.qty*item.qty) { toast(`❌ Stok ${b.nama} tidak cukup untuk checkout!`,'error'); return; }
+      if(b && b.stok < resepQtyToStok(b,ing.qty)*item.qty) { toast(`❌ Stok ${b.nama} tidak cukup untuk checkout!`,'error'); return; }
     }
   }
 
@@ -1747,9 +1755,11 @@ async function processCheckout(fromQRISConfirm=false) {
       for(const ing of ings) {
         const b=S.bahan.find(x=>x.id===ing.bahan_id);
         if(b) {
-          const newStok=Math.max(0, b.stok - ing.qty*item.qty);
+          const deduct=resepQtyToStok(b,ing.qty)*item.qty;
+          const newStok=Math.max(0, b.stok - deduct);
           await sb.from('bahan').update({stok:newStok}).eq('id',b.id);
-          addStokLog(b.nama, -(ing.qty*item.qty), `Terjual: ${item.nama} ×${item.qty}`);
+          const logDesc=b.gramasi?`Terjual: ${item.nama} ×${item.qty} (${ing.qty*item.qty}g)`:`Terjual: ${item.nama} ×${item.qty}`;
+          addStokLog(b.nama, -deduct, logDesc);
           b.stok=newStok;
         }
       }
@@ -1968,13 +1978,31 @@ async function deleteMenu(id) {
   loading(false);renderMenuPage();renderPOS();toast('Menu dihapus','info');
 }
 
-// Hitung HPP dari resep: Σ(qty × harga_satuan bahan)
+// Konversi qty resep ke satuan stok (pcs/satuan bahan)
+// Jika bahan punya gramasi: resep.qty adalah gram → konversi ke pcs
+// Jika tidak: resep.qty sudah dalam satuan bahan
+function resepQtyToStok(bahan, resepQty) {
+  return bahan?.gramasi ? resepQty / bahan.gramasi : resepQty;
+}
+// Biaya satu unit qty resep
+function biayaResep(bahan, resepQty) {
+  if(!bahan||!bahan.harga_satuan) return 0;
+  return bahan.gramasi
+    ? (bahan.harga_satuan / bahan.gramasi) * resepQty
+    : bahan.harga_satuan * resepQty;
+}
+// Satuan tampilan di resep (gram jika ada gramasi, else satuan asli)
+function resepUnit(bahan) {
+  return bahan?.gramasi ? 'gram' : (bahan?.satuan||'');
+}
+
+// Hitung HPP dari resep: Σ biayaResep per bahan
 function calcHPPFromResep(menuId) {
   const ings=S.resep.filter(r=>r.menu_id===menuId);
   if(!ings.length) return null;
   return ings.reduce((s,r)=>{
     const b=S.bahan.find(x=>x.id===r.bahan_id);
-    return s+(b&&b.harga_satuan?b.harga_satuan*r.qty:0);
+    return s+biayaResep(b,r.qty);
   },0);
 }
 
@@ -1997,7 +2025,7 @@ function updateResepHPPPreview() {
     const bid=document.getElementById('rr-bahan-'+i)?.value;
     const qty=parseFloat(document.getElementById('rr-qty-'+i)?.value)||0;
     const b=S.bahan.find(x=>x.id===bid);
-    total+=(b&&b.harga_satuan?b.harga_satuan*qty:0);
+    total+=biayaResep(b,qty);
   });
   const el=document.getElementById('resep-hpp-preview');
   if(!el)return;
@@ -2019,7 +2047,8 @@ function renderStokPage() {
     const pct=b.min_stok?(b.stok/b.min_stok*100):100;
     const st=pct<=0?'badge-red':pct<=100?'badge-amber':'badge-green';
     const stxt=pct<=0?'Habis':pct<=100?'Kritis':'Aman';
-    return `<tr><td><strong>${b.nama}</strong></td><td style="color:var(--muted)">${b.satuan}</td><td style="font-weight:700">${b.stok.toLocaleString('id-ID')}</td><td style="color:var(--muted)">${b.min_stok}</td><td style="color:var(--muted)">${fmt(b.harga_satuan)}/${b.satuan}</td><td><span class="badge ${st}">${stxt}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button></td></tr>`;
+    const gramasiInfo=b.gramasi?`<div style="font-size:.68rem;color:var(--accent)">1${b.satuan}=${b.gramasi}g · ${fmt(Math.round(b.harga_satuan/b.gramasi))}/g</div>`:'';
+    return `<tr><td><strong>${b.nama}</strong></td><td style="color:var(--muted)">${b.satuan}</td><td style="font-weight:700">${b.stok.toLocaleString('id-ID')}</td><td style="color:var(--muted)">${b.min_stok}</td><td style="color:var(--muted)">${fmt(b.harga_satuan)}/${b.satuan}${gramasiInfo}</td><td><span class="badge ${st}">${stxt}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button></td></tr>`;
   }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Belum ada bahan</td></tr>';
   renderStokLog();
 }
@@ -2031,11 +2060,20 @@ function formatRpInput(el) {
   updateCostHint();
 }
 
-// Update label harga ikut satuan yang dipilih
+// Update label harga + show/hide gramasi field sesuai satuan
 function updateCostLabel() {
   const unit=document.getElementById('sm-unit')?.value||'satuan';
   const lbl=document.getElementById('sm-cost-label');
   if(lbl) lbl.textContent=`Harga per ${unit} (Rp)`;
+  // Tampil gramasi hanya untuk satuan diskrit (bukan berat/volume)
+  const needsGramasi=['pcs','sachet','sdm'].includes(unit);
+  const wrap=document.getElementById('sm-gramasi-wrap');
+  if(wrap) wrap.style.display=needsGramasi?'':'none';
+  const gramasiLbl=document.getElementById('sm-gramasi-label');
+  if(gramasiLbl) gramasiLbl.textContent=`Isi per ${unit} (gram)`;
+  const gramasiUnit=document.getElementById('sm-gramasi-unit');
+  if(gramasiUnit) gramasiUnit.textContent=`gram/${unit}`;
+  if(!needsGramasi && document.getElementById('sm-gramasi')) document.getElementById('sm-gramasi').value='';
   updateCostHint();
 }
 
@@ -2046,20 +2084,33 @@ function updateCostHint() {
   const unit=document.getElementById('sm-unit')?.value||'satuan';
   const raw=document.getElementById('sm-cost')?.value.replace(/\D/g,'')||'';
   const val=parseInt(raw)||0;
-  if(!val){el.textContent='💡 Dipakai otomatis untuk hitung HPP resep';el.style.color='var(--muted)';return;}
-  // Konteks per satuan
+  const gramasi=parseInt(document.getElementById('sm-gramasi')?.value)||0;
+  const ghint=document.getElementById('sm-gramasi-hint');
+  if(!val){
+    el.textContent='💡 Dipakai otomatis untuk hitung HPP resep';
+    el.style.color='var(--muted)';
+    if(ghint) ghint.textContent='';
+    return;
+  }
   let perUnit='', note='';
-  if(unit==='kg'){
+  const isDisc=['pcs','sachet','sdm'].includes(unit);
+  if(isDisc && gramasi>0){
+    // Punya gramasi — bisa hitung per gram
+    const perGram=val/gramasi;
+    perUnit=`= Rp ${perGram.toLocaleString('id-ID',{maximumFractionDigits:1})}/gram`;
+    note=`Di resep: input dalam <strong>gram</strong> (mis. 20 gram = Rp ${Math.round(perGram*20).toLocaleString('id-ID')})`;
+    if(ghint) ghint.innerHTML=`✅ Rp <strong>${perGram.toLocaleString('id-ID',{maximumFractionDigits:1})}</strong>/gram`;
+  } else if(isDisc){
+    note=`Isi gramasi dulu agar bisa input resep dalam gram`;
+    if(ghint) ghint.textContent='';
+  } else if(unit==='kg'){
     perUnit=`≈ Rp ${(val/1000).toLocaleString('id-ID')}/gram`;
     note='Di resep: masukkan qty dalam kg (mis. 0.018 = 18 gram)';
   } else if(unit==='liter'){
     perUnit=`≈ Rp ${(val/1000).toLocaleString('id-ID')}/ml`;
     note='Di resep: masukkan qty dalam liter (mis. 0.2 = 200 ml)';
-  } else if(unit==='gram'||unit==='ml'){
-    note=`Di resep: masukkan qty dalam ${unit}`;
   } else {
-    // pcs, sachet, sdm, dll — harga langsung per unit, tanpa konversi gram
-    note=`Harga fix per ${unit} — qty di resep = jumlah ${unit} yang dipakai`;
+    note=`Di resep: masukkan qty dalam ${unit}`;
   }
   el.innerHTML=`✅ HPP pakai <strong>Rp ${val.toLocaleString('id-ID')}/${unit}</strong>${perUnit?` <span style="opacity:.65">(${perUnit})</span>`:''}<br><span style="opacity:.75">${note}</span>`;
   el.style.color='var(--accent)';
@@ -2074,6 +2125,7 @@ function openStokModal(id) {
   document.getElementById('sm-min').value=b?.min_stok||0;
   const costVal=b?.harga_satuan||0;
   document.getElementById('sm-cost').value=costVal?costVal.toLocaleString('id-ID'):'';
+  document.getElementById('sm-gramasi').value=b?.gramasi||'';
   document.getElementById('sm-eid').value=id||'';
   updateCostLabel();
   openModal('stok-modal');
@@ -2082,7 +2134,8 @@ function openStokModal(id) {
 async function saveStok() {
   const nama=document.getElementById('sm-name').value.trim();
   if(!nama){toast('Nama bahan wajib!','error');return;}
-  const data={nama,satuan:document.getElementById('sm-unit').value,stok:parseFloat(document.getElementById('sm-stok').value)||0,min_stok:parseFloat(document.getElementById('sm-min').value)||0,harga_satuan:parseFloat(document.getElementById('sm-cost').value.replace(/\./g,'').replace(',','.'))||0};
+  const gramasiVal=parseInt(document.getElementById('sm-gramasi').value)||null;
+  const data={nama,satuan:document.getElementById('sm-unit').value,stok:parseFloat(document.getElementById('sm-stok').value)||0,min_stok:parseFloat(document.getElementById('sm-min').value)||0,harga_satuan:parseFloat(document.getElementById('sm-cost').value.replace(/\./g,'').replace(',','.'))||0,gramasi:gramasiVal};
   const eid=document.getElementById('sm-eid').value;
   loading(true,'Menyimpan...');
   try {
@@ -2126,7 +2179,7 @@ async function saveRestock() {
 function renderResepPage() {
   document.getElementById('resep-list').innerHTML=S.menu.filter(m=>m.status==='aktif').map(m=>{
     const ings=S.resep.filter(r=>r.menu_id===m.id);
-    const ingText=ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?`${b.nama} ${r.qty} ${b.satuan}`:'?';}).join(', ');
+    const ingText=ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?`${b.nama} ${r.qty}${resepUnit(b)}`:'?';}).join(', ');
     const hpp=calcHPPFromResep(m.id);
     const hppBadge=hpp!==null&&hpp>0
       ?`<span style="font-size:.7rem;padding:2px 8px;border-radius:20px;background:var(--bg3);color:var(--accent);font-weight:600;margin-left:6px">HPP ${fmt(hpp)}</span>`:'';
@@ -2157,9 +2210,11 @@ function renderResepRows() {
   document.getElementById('resep-rows').innerHTML=ings.length
     ? ings.map((r,i)=>{
         const b=S.bahan.find(x=>x.id===r.bahan_id);
-        const unit=b?.satuan||'';
-        const isKg=unit==='kg', isLiter=unit==='liter';
-        const hint=isKg?'(masukkan dalam kg, mis. 0.018 = 18g)':isLiter?'(masukkan dalam liter, mis. 0.2 = 200ml)':'';
+        const unit=resepUnit(b);
+        const isKg=b?.satuan==='kg'&&!b?.gramasi, isLiter=b?.satuan==='liter'&&!b?.gramasi;
+        const hint=b?.gramasi
+          ?`input gram (1 ${b.satuan}=${b.gramasi}g · Rp ${Math.round(b.harga_satuan/b.gramasi).toLocaleString('id-ID')}/gram)`
+          :isKg?'masukkan dalam kg (mis. 0.018 = 18g)':isLiter?'masukkan dalam liter (mis. 0.2 = 200ml)':'';
         return `<div style="margin-bottom:9px">
           <div style="display:grid;grid-template-columns:1fr 80px auto auto;gap:7px;align-items:center">
             <select class="fi" id="rr-bahan-${i}" style="font-size:.8rem" onchange="updateResepUnit(${i});updateResepHPPPreview()">${S.bahan.map(b2=>`<option value="${b2.id}" ${b2.id===r.bahan_id?'selected':''}>${b2.nama} (${b2.satuan})</option>`).join('')}</select>
@@ -2178,15 +2233,17 @@ function updateResepUnit(i) {
   const bid=document.getElementById('rr-bahan-'+i)?.value;
   const b=S.bahan.find(x=>x.id===bid);
   const el=document.getElementById('rr-unit-'+i);
-  if(el) el.textContent=b?.satuan||'';
+  if(el) el.textContent=resepUnit(b);
   // Update hint
   const row=el?.closest('div[style*="margin-bottom"]');
   if(!row) return;
-  const hint=row.querySelector('div[style*="padding-left"]');
-  const unit=b?.satuan||'';
-  const isKg=unit==='kg', isLiter=unit==='liter';
-  const hintText=isKg?'(masukkan dalam kg, mis. 0.018 = 18g)':isLiter?'(masukkan dalam liter, mis. 0.2 = 200ml)':'';
-  if(hint){hint.style.display=hintText?'':'none';hint.innerHTML=hintText?`💡 ${hintText}`:'';}
+  const hintEl=row.querySelector('div[style*="padding-left"]');
+  const isKg=b?.satuan==='kg'&&!b?.gramasi, isLiter=b?.satuan==='liter'&&!b?.gramasi;
+  const hintText=b?.gramasi
+    ?`input gram (1 ${b.satuan}=${b.gramasi}g · Rp ${Math.round(b.harga_satuan/b.gramasi).toLocaleString('id-ID')}/gram)`
+    :isKg?'masukkan dalam kg (mis. 0.018 = 18g)':isLiter?'masukkan dalam liter (mis. 0.2 = 200ml)':'';
+  if(hintEl){hintEl.style.display=hintText?'':'none';hintEl.innerHTML=hintText?`💡 ${hintText}`:'';}
+  updateResepHPPPreview();
 }
 
 function addResepRow() {
@@ -2224,7 +2281,7 @@ async function saveResep() {
     // Auto-update HPP di menu jika semua bahan punya harga_satuan
     const calculatedHPP=newResep.reduce((s,r)=>{
       const b=S.bahan.find(x=>x.id===r.bahan_id);
-      return s+(b&&b.harga_satuan?b.harga_satuan*r.qty:0);
+      return s+biayaResep(b,r.qty);
     },0);
     if(calculatedHPP>0) {
       await sb.from('menu').update({hpp:calculatedHPP}).eq('id',S.editResepMenuId);
