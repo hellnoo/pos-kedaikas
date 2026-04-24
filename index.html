@@ -731,6 +731,16 @@ select.fi{appearance:none;cursor:pointer}
           <div class="card"><div class="card-t">👤 Per Kasir</div><div id="lap-bk-kasir"></div></div>
           <div class="card"><div class="card-t">🕐 Per Jam (Puncak)</div><div id="lap-bk-jam"></div></div>
         </div>
+        <div class="g2" style="margin-bottom:14px">
+          <div class="card">
+            <div class="card-t">🗑️ Pembuangan / Kerugian Stok</div>
+            <div id="lap-pembuangan"></div>
+          </div>
+          <div class="card">
+            <div class="card-t">💵 Rekonsiliasi Kas</div>
+            <div id="lap-rekon"></div>
+          </div>
+        </div>
         <div class="card">
           <div class="card-t">Detail Transaksi <span id="lap-tx-count" style="font-size:.75rem;color:var(--muted);font-weight:400"></span></div>
           <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Waktu</th><th>Item</th><th>Total</th><th>HPP</th><th>Laba</th><th>Bayar</th><th>Kasir</th><th>Aksi</th></tr></thead><tbody id="lap-tx"></tbody></table></div>
@@ -754,16 +764,26 @@ select.fi{appearance:none;cursor:pointer}
       <div class="content">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <span style="font-size:.82rem;color:var(--muted)">Stok bahan baku</span>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-ghost" onclick="openRestockModal()">📦 Restock</button>
+            <button class="btn btn-ghost" style="color:var(--red);border-color:var(--red)" onclick="openStokKeluarModal()">🗑️ Catat Pembuangan</button>
             <button class="btn btn-amber" onclick="openStokModal()">+ Tambah Bahan</button>
           </div>
         </div>
         <div id="stok-alerts"></div>
         <div class="card" style="margin-bottom:14px"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Bahan</th><th>Satuan</th><th>Stok</th><th>Min</th><th>Harga/Satuan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="stok-tbl"></tbody></table></div></div>
-        <div class="card">
-          <div class="card-t">📋 Riwayat Perubahan Stok <button class="btn btn-sm btn-ghost" onclick="clearStokLog()" style="font-size:.68rem">Hapus Log</button></div>
-          <div id="stok-log-list"><div class="empty"><p style="font-size:.78rem">Belum ada perubahan stok di sesi ini</p></div></div>
+        <div class="g2" style="margin-bottom:0">
+          <div class="card">
+            <div class="card-t">📋 Riwayat Perubahan Stok <button class="btn btn-sm btn-ghost" onclick="clearStokLog()" style="font-size:.68rem">Hapus Log</button></div>
+            <div id="stok-log-list"><div class="empty"><p style="font-size:.78rem">Belum ada perubahan stok di sesi ini</p></div></div>
+          </div>
+          <div class="card">
+            <div class="card-t" style="display:flex;justify-content:space-between;align-items:center">
+              <span>🗑️ Riwayat Pembuangan</span>
+              <span id="pembuangan-total-badge" style="font-size:.72rem;color:var(--red);font-weight:600"></span>
+            </div>
+            <div id="pembuangan-log-list"><div class="empty"><p style="font-size:.78rem">Belum ada pembuangan tercatat</p></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -884,6 +904,34 @@ select.fi{appearance:none;cursor:pointer}
     <div class="fg"><label class="fl">Pilih Bahan</label><select class="fi" id="rs-bahan"></select></div>
     <div class="fg"><label class="fl">Jumlah Tambah</label><input class="fi" type="number" id="rs-qty" placeholder="0"></div>
     <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('restock-modal')">Batal</button><button class="btn btn-amber" onclick="saveRestock()">Tambah Stok</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="keluar-modal">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-title">🗑️ Catat Pembuangan / Bahan Keluar</div><button class="modal-x" onclick="closeModal('keluar-modal')">×</button></div>
+    <div class="fg"><label class="fl">Pilih Bahan</label><select class="fi" id="ko-bahan" onchange="updateKeluarContext()"></select></div>
+    <div class="fg">
+      <label class="fl" id="ko-qty-label">Jumlah yang Dibuang</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="fi" type="number" id="ko-qty" placeholder="0" step="any" oninput="updateKeluarKerugian()" style="flex:1">
+        <span id="ko-qty-unit" style="font-size:.85rem;font-weight:700;color:var(--accent);min-width:36px"></span>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Alasan</label>
+        <select class="fi" id="ko-alasan">
+          <option value="Kadaluarsa">📅 Kadaluarsa</option>
+          <option value="Tumpah / Rusak">💧 Tumpah / Rusak</option>
+          <option value="Sisa Kemasan Terbuka">🥫 Sisa Kemasan Terbuka</option>
+          <option value="Koreksi Stok">📋 Koreksi Stok</option>
+          <option value="Lainnya">❓ Lainnya</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Catatan (opsional)</label><input class="fi" id="ko-catatan" placeholder="mis. kemasan jatuh"></div>
+    </div>
+    <div id="ko-info" style="padding:10px 14px;border-radius:var(--rs);background:var(--bg3);font-size:.82rem;margin-top:4px"></div>
+    <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('keluar-modal')">Batal</button><button class="btn btn-red" onclick="saveStokKeluar()">⚠️ Catat Pembuangan</button></div>
   </div>
 </div>
 
@@ -1214,16 +1262,18 @@ async function doOnboarding() {
 // ================================================================
 async function loadTokoData() {
   const tid = S.toko.id;
-  const [pg, mn, bh, tx] = await Promise.all([
+  const [pg, mn, bh, tx, sk] = await Promise.all([
     sb.from('pengguna').select('*').eq('toko_id',tid),
     sb.from('menu').select('*').eq('toko_id',tid).order('created_at'),
     sb.from('bahan').select('*').eq('toko_id',tid).order('nama'),
     sb.from('transaksi').select('*').eq('toko_id',tid).order('created_at',{ascending:false}).limit(1000),
+    sb.from('stok_keluar').select('*').eq('toko_id',tid).order('created_at',{ascending:false}).limit(500),
   ]);
   S.pengguna = pg.data||[];
   S.menu = mn.data||[];
   S.bahan = bh.data||[];
   S.transaksi = tx.data||[];
+  S.stokKeluar = sk.data||[];
   // Fetch resep filtered by this toko's menu IDs only (security fix)
   const menuIds = S.menu.map(m=>m.id);
   if(menuIds.length) {
@@ -1832,11 +1882,14 @@ function renderDashboard() {
   const ydRev=ydTx.reduce((s,t)=>s+t.total,0);
   const g=ydRev?(((rev-ydRev)/ydRev)*100).toFixed(1):null;
 
+  const todayKeluar=(S.stokKeluar||[]).filter(k=>k.tanggal===iso);
+  const kerugianHariIni=todayKeluar.reduce((s,k)=>s+k.kerugian,0);
+  const labaFinal=profit-kerugianHariIni;
   document.getElementById('db-stats').innerHTML=`
     <div class="stat-tile"><div class="st-ico">💰</div><div class="st-val">${fmt(rev)}</div><div class="st-lbl">Omzet Hari Ini</div>${g!==null?`<div class="st-sub ${g>=0?'st-up':'st-dn'}">${g>=0?'↑':'↓'} ${Math.abs(g)}% vs kemarin</div>`:''}</div>
-    <div class="stat-tile"><div class="st-ico">📈</div><div class="st-val">${fmt(profit)}</div><div class="st-lbl">Laba Hari Ini</div><div class="st-sub" style="color:var(--muted)">Margin ${rev?((profit/rev)*100).toFixed(1):0}%</div></div>
+    <div class="stat-tile"><div class="st-ico">📈</div><div class="st-val" style="color:${labaFinal>=0?'var(--green)':'var(--red)'}">${fmt(labaFinal)}</div><div class="st-lbl">Laba Bersih</div><div class="st-sub" style="color:var(--muted)">Margin ${rev?((labaFinal/rev)*100).toFixed(1):0}%${kerugianHariIni?` · buang ${fmt(kerugianHariIni)}`:''}</div></div>
     <div class="stat-tile"><div class="st-ico">🧾</div><div class="st-val">${todayTx.length}</div><div class="st-lbl">Transaksi</div></div>
-    <div class="stat-tile"><div class="st-ico">⚠️</div><div class="st-val" style="color:var(--red)">${S.bahan.filter(b=>b.stok<=b.min_stok).length}</div><div class="st-lbl">Stok Kritis</div></div>
+    <div class="stat-tile"><div class="st-ico">🗑️</div><div class="st-val" style="color:${kerugianHariIni?'var(--red)':'var(--muted)'}">${fmt(kerugianHariIni)}</div><div class="st-lbl">Kerugian Buang</div><div class="st-sub" style="color:var(--muted)">${todayKeluar.length} catatan</div></div>
   `;
 
   const days=[];
@@ -1887,20 +1940,54 @@ function renderLaporan() {
   const rev=txs.reduce((s,t)=>s+t.total,0);
   const hpp=txs.reduce((s,t)=>s+t.total_hpp,0);
   const profit=txs.reduce((s,t)=>s+t.laba,0);
-  const margin=rev?((profit/rev)*100).toFixed(1):0;
+  // Filter pembuangan sesuai periode laporan
+  let keluarPeriod=[];
+  if(p==='harian'){const d=document.getElementById('lap-date').value||todayISO();keluarPeriod=(S.stokKeluar||[]).filter(k=>k.tanggal===d);}
+  else if(p==='mingguan'){const d=new Date(document.getElementById('lap-date').value||todayISO());const day=d.getDay()||7;const mon=new Date(d);mon.setDate(d.getDate()-day+1);const sun=new Date(mon);sun.setDate(mon.getDate()+6);keluarPeriod=(S.stokKeluar||[]).filter(k=>{const kd=new Date(k.tanggal);return kd>=mon&&kd<=sun;});}
+  else{const ym=document.getElementById('lap-month').value||todayISO().slice(0,7);keluarPeriod=(S.stokKeluar||[]).filter(k=>k.tanggal.startsWith(ym));}
+  const totalKerugian=keluarPeriod.reduce((s,k)=>s+k.kerugian,0);
+  const labaFinal=profit-totalKerugian;
+  const margin=rev?((labaFinal/rev)*100).toFixed(1):0;
+  const kasCash=txs.filter(t=>t.pembayaran==='cash').reduce((s,t)=>s+t.total,0);
+  const kasQris=txs.filter(t=>t.pembayaran==='qris').reduce((s,t)=>s+t.total,0);
 
   document.getElementById('lap-stats').innerHTML=`
     <div class="stat-tile"><div class="st-ico">💰</div><div class="st-val">${fmt(rev)}</div><div class="st-lbl">Total Omzet</div></div>
     <div class="stat-tile"><div class="st-ico">📦</div><div class="st-val">${fmt(hpp)}</div><div class="st-lbl">Total HPP</div></div>
-    <div class="stat-tile"><div class="st-ico">📈</div><div class="st-val" style="color:var(--green)">${fmt(profit)}</div><div class="st-lbl">Laba Bersih</div></div>
-    <div class="stat-tile"><div class="st-ico">🧾</div><div class="st-val">${txs.length}</div><div class="st-lbl">Transaksi</div><div class="st-sub" style="color:var(--muted)">Margin ${margin}%</div></div>
+    <div class="stat-tile"><div class="st-ico">📈</div><div class="st-val" style="color:${labaFinal>=0?'var(--green)':'var(--red)'}">${fmt(labaFinal)}</div><div class="st-lbl">Laba Bersih Final</div><div class="st-sub" style="color:var(--muted)">Margin ${margin}%</div></div>
+    <div class="stat-tile"><div class="st-ico">🗑️</div><div class="st-val" style="color:${totalKerugian?'var(--red)':'var(--muted)'}">${fmt(totalKerugian)}</div><div class="st-lbl">Kerugian Buang</div><div class="st-sub" style="color:var(--muted)">${keluarPeriod.length} catatan</div></div>
   `;
 
   document.getElementById('lap-profit').innerHTML=`
     <div class="ir"><span class="lbl">Omzet Kotor</span><span class="val">${fmt(rev)}</span></div>
     <div class="ir"><span class="lbl">Total HPP</span><span class="val" style="color:var(--red)">- ${fmt(hpp)}</span></div>
-    <div class="ir"><span class="lbl" style="font-weight:700">Laba Bersih</span><span class="val" style="color:var(--green);font-size:1.05rem">${fmt(profit)}</span></div>
+    <div class="ir" style="padding-top:6px;border-top:1px solid var(--border)"><span class="lbl">Laba dari Penjualan</span><span class="val" style="color:var(--green)">${fmt(profit)}</span></div>
+    ${totalKerugian?`<div class="ir"><span class="lbl" style="color:var(--red)">Kerugian Pembuangan</span><span class="val" style="color:var(--red)">- ${fmt(totalKerugian)}</span></div>`:''}
+    <div class="ir" style="padding-top:6px;border-top:1px solid var(--border)"><span class="lbl" style="font-weight:700">Laba Bersih Final</span><span class="val" style="color:${labaFinal>=0?'var(--green)':'var(--red)'};font-size:1.05rem">${fmt(labaFinal)}</span></div>
     <div class="ir"><span class="lbl">Margin</span><span class="val" style="color:var(--amber)">${margin}%</span></div>
+  `;
+
+  // Pembuangan detail
+  const alasanGroup={};keluarPeriod.forEach(k=>{alasanGroup[k.alasan]=(alasanGroup[k.alasan]||0)+k.kerugian;});
+  document.getElementById('lap-pembuangan').innerHTML=keluarPeriod.length
+    ?`${Object.entries(alasanGroup).sort((a,b)=>b[1]-a[1]).map(([a,v])=>`<div class="ir"><span class="lbl">${a}</span><span class="val" style="color:var(--red)">${fmt(v)}</span></div>`).join('')}
+      <div class="ir" style="padding-top:6px;border-top:1px solid var(--border)"><span class="lbl" style="font-weight:600">Total Kerugian</span><span class="val" style="color:var(--red);font-weight:700">${fmt(totalKerugian)}</span></div>
+      <div style="margin-top:10px;max-height:180px;overflow-y:auto">${keluarPeriod.slice(0,15).map(k=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:.75rem"><div><strong>${k.bahan_nama}</strong><span style="color:var(--muted);margin-left:5px">${k.alasan}</span><div style="color:var(--muted);font-size:.68rem">${k.tanggal} · ${k.kasir_nama}</div></div><span style="color:var(--red);font-weight:700">${fmt(k.kerugian)}</span></div>`).join('')}</div>`
+    :'<div class="empty"><p style="font-size:.78rem">Tidak ada pembuangan di periode ini</p></div>';
+
+  // Rekonsiliasi kas
+  document.getElementById('lap-rekon').innerHTML=`
+    <div class="ir"><span class="lbl">💵 Kas Tunai (Cash)</span><span class="val" style="color:var(--green);font-weight:700">${fmt(kasCash)}</span></div>
+    <div class="ir"><span class="lbl">📱 QRIS</span><span class="val" style="color:var(--blue,#4e9ef5);font-weight:700">${fmt(kasQris)}</span></div>
+    <div class="ir" style="padding-top:6px;border-top:1px solid var(--border)"><span class="lbl" style="font-weight:600">Total Omzet</span><span class="val">${fmt(rev)}</span></div>
+    <div style="margin-top:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--rs)">
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">💡 Rekonsiliasi Kasir</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:.82rem">Kas yg seharusnya ada di laci:</span>
+        <strong style="color:var(--amber);font-size:1rem">${fmt(kasCash)}</strong>
+      </div>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:3px">= total transaksi tunai periode ini (belum termasuk modal awal)</div>
+    </div>
   `;
 
   const mc={};txs.forEach(t=>t.items.forEach(i=>{mc[i.nama]=(mc[i.nama]||0)+i.qty;}));
@@ -2051,6 +2138,7 @@ function renderStokPage() {
     return `<tr><td><strong>${b.nama}</strong></td><td style="color:var(--muted)">${b.satuan}</td><td style="font-weight:700">${b.stok.toLocaleString('id-ID')}</td><td style="color:var(--muted)">${b.min_stok}</td><td style="color:var(--muted)">${fmt(b.harga_satuan)}/${b.satuan}${gramasiInfo}</td><td><span class="badge ${st}">${stxt}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button></td></tr>`;
   }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Belum ada bahan</td></tr>';
   renderStokLog();
+  renderPembuanganLog();
 }
 
 // Format angka ribuan otomatis (195000 → 195.000) untuk input harga
@@ -2171,6 +2259,107 @@ async function saveRestock() {
   addStokLog(b.nama, +qty, 'Restock manual');
   loading(false);closeModal('restock-modal');renderStokPage();updateNavBadges();
   toast(`Stok ${b.nama} +${qty} ${b.satuan}!`,'success');
+}
+
+// ================================================================
+// STOK KELUAR / PEMBUANGAN
+// ================================================================
+function openStokKeluarModal() {
+  const sel=document.getElementById('ko-bahan');
+  sel.innerHTML=S.bahan.map(b=>`<option value="${b.id}">${b.nama} — stok: ${b.stok.toLocaleString('id-ID')} ${b.satuan}</option>`).join('');
+  document.getElementById('ko-qty').value='';
+  document.getElementById('ko-catatan').value='';
+  document.getElementById('ko-alasan').value='Kadaluarsa';
+  document.getElementById('ko-info').innerHTML='<span style="color:var(--muted)">Masukkan jumlah untuk lihat estimasi kerugian</span>';
+  updateKeluarContext();
+  openModal('keluar-modal');
+}
+
+function updateKeluarContext() {
+  const bid=document.getElementById('ko-bahan')?.value;
+  const b=S.bahan.find(x=>x.id===bid);
+  const unit=resepUnit(b);
+  document.getElementById('ko-qty-unit').textContent=unit;
+  document.getElementById('ko-qty-label').textContent=`Jumlah yang Dibuang (${unit})`;
+  updateKeluarKerugian();
+}
+
+function updateKeluarKerugian() {
+  const bid=document.getElementById('ko-bahan')?.value;
+  const b=S.bahan.find(x=>x.id===bid);
+  const qty=parseFloat(document.getElementById('ko-qty')?.value)||0;
+  const el=document.getElementById('ko-info');
+  if(!b||!qty){el.innerHTML='<span style="color:var(--muted)">Masukkan jumlah untuk lihat estimasi kerugian</span>';return;}
+  const kerugian=biayaResep(b,qty);
+  const stokDeduct=resepQtyToStok(b,qty);
+  const unit=resepUnit(b);
+  const overStok=b.stok<stokDeduct;
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span>Estimasi Kerugian</span><strong style="color:var(--red)">${fmt(kerugian)}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span style="color:var(--muted)">Stok berkurang</span>
+      <span style="color:var(--muted)">${stokDeduct%1===0?stokDeduct:stokDeduct.toFixed(4)} ${b.satuan} <span style="opacity:.6">(dari ${b.stok} ${b.satuan})</span></span>
+    </div>
+    ${b.gramasi?`<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Setara</span><span style="color:var(--muted)">${qty}${unit} dari 1 kemasan ${b.gramasi}${unit}</span></div>`:''}
+    ${overStok?'<div style="color:var(--red);margin-top:6px;font-weight:600">⚠️ Melebihi stok tersedia!</div>':''}
+  `;
+}
+
+async function saveStokKeluar() {
+  const bid=document.getElementById('ko-bahan').value;
+  const qty=parseFloat(document.getElementById('ko-qty').value)||0;
+  const alasan=document.getElementById('ko-alasan').value;
+  const catatan=document.getElementById('ko-catatan').value.trim();
+  if(!bid||qty<=0){toast('Pilih bahan dan masukkan jumlah!','error');return;}
+  const b=S.bahan.find(x=>x.id===bid);
+  if(!b) return;
+  const stokDeduct=resepQtyToStok(b,qty);
+  if(b.stok<stokDeduct){toast('Jumlah melebihi stok yang tersedia!','error');return;}
+  const unit=resepUnit(b);
+  const kerugian=Math.round(biayaResep(b,qty));
+  const newStok=Math.max(0,b.stok-stokDeduct);
+  loading(true,'Mencatat pembuangan...');
+  try {
+    await sb.from('bahan').update({stok:newStok}).eq('id',bid);
+    b.stok=newStok;
+    const record={
+      toko_id:S.toko.id,bahan_id:bid,bahan_nama:b.nama,
+      qty,satuan:unit,alasan,catatan,kerugian,
+      kasir_id:S.currentUser.id,kasir_nama:S.currentUser.nama,
+      tanggal:todayISO(),
+    };
+    const {data,error}=await sb.from('stok_keluar').insert(record).select().single();
+    if(error) throw error;
+    S.stokKeluar.unshift(data);
+    addStokLog(b.nama,-stokDeduct,`Pembuangan: ${alasan}${catatan?' — '+catatan:''}`);
+    loading(false);closeModal('keluar-modal');
+    renderStokPage();renderDashboard();
+    toast(`Tercatat: ${qty}${unit} ${b.nama} — kerugian ${fmt(kerugian)}`,'info');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+}
+
+function renderPembuanganLog() {
+  const el=document.getElementById('pembuangan-log-list');
+  const badge=document.getElementById('pembuangan-total-badge');
+  if(!el) return;
+  const recent=S.stokKeluar.slice(0,30);
+  const todayTotal=S.stokKeluar.filter(k=>k.tanggal===todayISO()).reduce((s,k)=>s+k.kerugian,0);
+  if(badge) badge.textContent=todayTotal?`Hari ini: ${fmt(todayTotal)}`:'';
+  el.innerHTML=recent.length?recent.map(k=>`
+    <div class="stok-log-row">
+      <span style="font-size:1rem">🗑️</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:.8rem">${k.bahan_nama} <span class="badge badge-red" style="font-size:.6rem;padding:1px 5px">${k.alasan}</span></div>
+        ${k.catatan?`<div style="color:var(--muted);font-size:.7rem;margin-top:1px">${k.catatan}</div>`:''}
+        <div style="color:var(--muted);font-size:.68rem;margin-top:1px">${k.tanggal} · ${k.kasir_nama}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="log-delta neg">-${k.qty}${k.satuan}</div>
+        <div style="color:var(--red);font-size:.72rem;font-weight:600">${fmt(k.kerugian)}</div>
+      </div>
+    </div>`).join(''):'<div class="empty"><p style="font-size:.78rem">Belum ada pembuangan</p></div>';
 }
 
 // ================================================================
