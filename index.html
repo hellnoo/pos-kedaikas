@@ -592,6 +592,9 @@ select.fi{appearance:none;cursor:pointer}
     </div>
     <nav class="sb-nav">
       <button class="sb-btn on" data-p="pos" onclick="goPage('pos',this)"><span class="ic">🛒</span> Kasir / POS<span class="nav-badge" id="cart-badge" style="background:var(--amber);color:#000"></span></button>
+      <div class="sb-sec">Shift</div>
+      <button class="sb-btn" id="nav-kas-awal" onclick="openKasAwalModal()"><span class="ic">💰</span> Cek Kas Awal<span id="kas-awal-badge" class="nav-badge" style="background:var(--green)">✓</span></button>
+      <button class="sb-btn" id="nav-setor" onclick="openSetoranModal()"><span class="ic">💸</span> Setor ke Owner<span class="nav-badge" id="setor-badge"></span></button>
       <div class="sb-sec" id="nav-owner-sec">Owner</div>
       <button class="sb-btn" data-p="dashboard" onclick="goPage('dashboard',this)" id="nav-db"><span class="ic">📊</span> Dashboard</button>
       <button class="sb-btn" data-p="laporan" onclick="goPage('laporan',this)" id="nav-lap"><span class="ic">📈</span> Laporan</button>
@@ -690,6 +693,10 @@ select.fi{appearance:none;cursor:pointer}
         <div class="g2" style="margin-bottom:14px">
           <div class="card"><div class="card-t">Penjualan 7 Hari</div><div id="db-chart"></div></div>
           <div class="card"><div class="card-t">Menu Terlaris Hari Ini</div><div id="db-terlaris"></div></div>
+        </div>
+        <div class="g2" style="margin-bottom:14px">
+          <div class="card"><div class="card-t">💸 Setoran Kasir <span id="db-setor-badge" style="font-size:.7rem;color:var(--red);font-weight:600"></span></div><div id="db-setor-list"></div></div>
+          <div class="card"><div class="card-t">💰 Kas Shift Hari Ini</div><div id="db-kas-shift-list"></div></div>
         </div>
         <div class="card">
           <div class="card-t">Transaksi Terbaru</div>
@@ -943,6 +950,46 @@ select.fi{appearance:none;cursor:pointer}
     <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="addResepRow()">+ Tambah Bahan</button>
     <div id="resep-hpp-preview" style="margin-top:10px;padding:8px 12px;border-radius:var(--rs);background:var(--bg3);font-size:.82rem;text-align:center"></div>
     <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('resep-modal')">Batal</button><button class="btn btn-amber" onclick="saveResep()">Simpan Resep</button></div>
+  </div>
+</div>
+
+<!-- KAS AWAL SHIFT -->
+<div class="overlay" id="kas-awal-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-hd"><div class="modal-title">💰 Cek Kas Awal Shift</div></div>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Hitung uang di laci kasir sekarang dan masukkan jumlahnya. Ini jadi acuan rekonsiliasi akhir shift.</p>
+    <div class="fg">
+      <label class="fl">Jumlah Uang di Laci (Rp)</label>
+      <div style="position:relative">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.82rem;pointer-events:none">Rp</span>
+        <input class="fi" type="text" id="ka-jumlah" placeholder="0" inputmode="numeric" oninput="formatRpInput(this)" style="padding-left:28px;font-size:1.1rem;font-weight:700">
+      </div>
+    </div>
+    <div id="ka-info" style="font-size:.78rem;color:var(--muted);padding:8px 12px;background:var(--bg3);border-radius:var(--rs);margin-top:4px">
+      💡 Kasir yang masuk shift biasanya menerima uang modal awal dari owner atau sisa shift sebelumnya.
+    </div>
+    <div class="modal-ft" style="gap:8px">
+      <button class="btn btn-ghost" onclick="closeModal('kas-awal-modal')">Lewati</button>
+      <button class="btn btn-amber" onclick="saveKasAwal()">✅ Mulai Shift</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETORAN KAS KE OWNER -->
+<div class="overlay" id="setoran-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-hd"><div class="modal-title">💸 Setor Kas ke Owner</div><button class="modal-x" onclick="closeModal('setoran-modal')">×</button></div>
+    <div id="setoran-rekap" style="padding:10px 14px;background:var(--bg3);border-radius:var(--rs);font-size:.82rem;margin-bottom:14px"></div>
+    <div class="fg">
+      <label class="fl">Jumlah yang Disetor (Rp)</label>
+      <div style="position:relative">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.82rem;pointer-events:none">Rp</span>
+        <input class="fi" type="text" id="stor-jumlah" placeholder="0" inputmode="numeric" oninput="formatRpInput(this);updateSetoranInfo()" style="padding-left:28px;font-size:1.1rem;font-weight:700">
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Catatan (opsional)</label><input class="fi" id="stor-catatan" placeholder="mis. setoran shift siang"></div>
+    <div id="stor-info" style="font-size:.78rem;padding:8px 12px;background:var(--bg3);border-radius:var(--rs);margin-top:4px"></div>
+    <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('setoran-modal')">Batal</button><button class="btn btn-amber" onclick="saveSetoran()">💸 Setor Sekarang</button></div>
   </div>
 </div>
 
@@ -1262,18 +1309,22 @@ async function doOnboarding() {
 // ================================================================
 async function loadTokoData() {
   const tid = S.toko.id;
-  const [pg, mn, bh, tx, sk] = await Promise.all([
+  const [pg, mn, bh, tx, sk, ks, stor] = await Promise.all([
     sb.from('pengguna').select('*').eq('toko_id',tid),
     sb.from('menu').select('*').eq('toko_id',tid).order('created_at'),
     sb.from('bahan').select('*').eq('toko_id',tid).order('nama'),
     sb.from('transaksi').select('*').eq('toko_id',tid).order('created_at',{ascending:false}).limit(1000),
     sb.from('stok_keluar').select('*').eq('toko_id',tid).order('created_at',{ascending:false}).limit(500),
+    sb.from('kas_shift').select('*').eq('toko_id',tid).order('created_at',{ascending:false}).limit(200),
+    sb.from('setoran_kas').select('*').eq('toko_id',tid).order('created_at',{ascending:false}).limit(200),
   ]);
   S.pengguna = pg.data||[];
   S.menu = mn.data||[];
   S.bahan = bh.data||[];
   S.transaksi = tx.data||[];
   S.stokKeluar = sk.data||[];
+  S.kasShift = ks.data||[];
+  S.setoranKas = stor.data||[];
   // Fetch resep filtered by this toko's menu IDs only (security fix)
   const menuIds = S.menu.map(m=>m.id);
   if(menuIds.length) {
@@ -1466,6 +1517,9 @@ function initApp() {
   requestNotifPermission();
   initRealtimeNotif();
   applyTheme(localStorage.getItem('kk_theme') || (window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'));
+  updateSetoranBadge();
+  // Tanya kas awal shift jika belum diisi hari ini
+  setTimeout(checkKasAwal, 800);
 }
 
 function updateClock() {
@@ -1870,6 +1924,119 @@ function showStruk(tx) {
 }
 
 // ================================================================
+// KAS AWAL & SETORAN
+// ================================================================
+function checkKasAwal() {
+  const today=todayISO();
+  const uid=S.currentUser?.id;
+  const sudahIsi=(S.kasShift||[]).find(k=>k.tanggal===today&&k.kasir_id===uid);
+  const badge=document.getElementById('kas-awal-badge');
+  if(sudahIsi){
+    if(badge){badge.textContent='✓';badge.style.display='inline-block';}
+  } else {
+    if(badge) badge.style.display='none';
+    openKasAwalModal();
+  }
+}
+
+function openKasAwalModal() {
+  document.getElementById('ka-jumlah').value='';
+  // Tampilkan saldo setoran hari kemarin jika ada
+  const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+  const yd=yesterday.toISOString().slice(0,10);
+  const ydShift=(S.kasShift||[]).find(k=>k.tanggal===yd&&k.kasir_id===S.currentUser?.id);
+  const el=document.getElementById('ka-info');
+  if(ydShift) el.innerHTML=`💡 Shift kemarin kamu catat kas awal <strong>${fmt(ydShift.jumlah_awal)}</strong>. Masukkan uang yang sekarang ada di laci.`;
+  else el.innerHTML='💡 Hitung uang di laci kasir sekarang dan masukkan jumlahnya.';
+  openModal('kas-awal-modal');
+}
+
+async function saveKasAwal() {
+  const raw=document.getElementById('ka-jumlah').value.replace(/\./g,'')||'0';
+  const jumlah=parseInt(raw)||0;
+  loading(true,'Menyimpan kas awal...');
+  try {
+    const record={toko_id:S.toko.id,kasir_id:S.currentUser.id,kasir_nama:S.currentUser.nama,jumlah_awal:jumlah,tanggal:todayISO(),waktu:nowStr()};
+    const {data}=await sb.from('kas_shift').insert(record).select().single();
+    S.kasShift.unshift(data);
+    const badge=document.getElementById('kas-awal-badge');
+    if(badge){badge.textContent='✓';badge.style.display='inline-block';}
+    loading(false);closeModal('kas-awal-modal');
+    toast(`Kas awal shift: ${fmt(jumlah)} ✅`,'success');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+}
+
+function openSetoranModal() {
+  document.getElementById('stor-jumlah').value='';
+  document.getElementById('stor-catatan').value='';
+  // Hitung rekap shift hari ini
+  const today=todayISO();
+  const uid=S.currentUser?.id;
+  const kasAwal=(S.kasShift||[]).find(k=>k.tanggal===today&&k.kasir_id===uid);
+  const txHariIni=(S.transaksi||[]).filter(t=>t.tanggal===today&&t.kasir_id===uid&&t.pembayaran==='cash');
+  const totalCash=txHariIni.reduce((s,t)=>s+t.total,0);
+  const sudahSetor=(S.setoranKas||[]).filter(k=>k.tanggal===today&&k.kasir_id===uid).reduce((s,k)=>s+k.jumlah,0);
+  const totalLaci=(kasAwal?.jumlah_awal||0)+totalCash-sudahSetor;
+  document.getElementById('setoran-rekap').innerHTML=`
+    <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Kas awal shift</span><strong>${fmt(kasAwal?.jumlah_awal||0)}</strong></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Penjualan tunai hari ini</span><strong style="color:var(--green)">+ ${fmt(totalCash)}</strong></div>
+    ${sudahSetor?`<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Sudah disetor</span><strong style="color:var(--red)">- ${fmt(sudahSetor)}</strong></div>`:''}
+    <div style="display:flex;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border)"><span style="font-weight:700">Estimasi di laci</span><strong style="color:var(--amber);font-size:1rem">${fmt(totalLaci)}</strong></div>
+  `;
+  document.getElementById('stor-info').innerHTML='<span style="color:var(--muted)">Masukkan jumlah yang akan diserahkan ke owner</span>';
+  openModal('setoran-modal');
+}
+
+function updateSetoranInfo() {
+  const raw=document.getElementById('stor-jumlah')?.value.replace(/\./g,'')||'0';
+  const jumlah=parseInt(raw)||0;
+  const el=document.getElementById('stor-info');
+  if(!jumlah){el.innerHTML='<span style="color:var(--muted)">Masukkan jumlah yang akan diserahkan ke owner</span>';return;}
+  el.innerHTML=`<span style="color:var(--accent)">✅ Akan mencatat setoran <strong>${fmt(jumlah)}</strong> — status awal: <em>Menunggu konfirmasi owner</em></span>`;
+}
+
+async function saveSetoran() {
+  const raw=document.getElementById('stor-jumlah').value.replace(/\./g,'')||'0';
+  const jumlah=parseInt(raw)||0;
+  const catatan=document.getElementById('stor-catatan').value.trim();
+  if(!jumlah){toast('Masukkan jumlah setoran!','error');return;}
+  loading(true,'Menyimpan setoran...');
+  try {
+    const record={toko_id:S.toko.id,kasir_id:S.currentUser.id,kasir_nama:S.currentUser.nama,jumlah,catatan,status:'menunggu',tanggal:todayISO(),waktu:nowStr()};
+    const {data}=await sb.from('setoran_kas').insert(record).select().single();
+    S.setoranKas.unshift(data);
+    updateSetoranBadge();
+    if(S.currentUser?.role==='owner') renderDashboard();
+    loading(false);closeModal('setoran-modal');
+    toast(`Setoran ${fmt(jumlah)} tercatat — menunggu konfirmasi owner 🕐`,'success');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+}
+
+async function konfirmasiSetoran(id) {
+  const s=S.setoranKas.find(x=>x.id===id);
+  if(!s) return;
+  if(!confirm(`Konfirmasi terima setoran ${fmt(s.jumlah)} dari ${s.kasir_nama}?`)) return;
+  loading(true,'Mengkonfirmasi...');
+  try {
+    await sb.from('setoran_kas').update({status:'diterima',diterima_oleh:S.currentUser.nama}).eq('id',id);
+    s.status='diterima';s.diterima_oleh=S.currentUser.nama;
+    updateSetoranBadge();
+    renderDashboard();
+    if(document.getElementById('page-laporan')?.classList.contains('on')) renderLaporan();
+    loading(false);toast(`Setoran ${fmt(s.jumlah)} dikonfirmasi ✅`,'success');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+}
+
+function updateSetoranBadge() {
+  const pending=(S.setoranKas||[]).filter(s=>s.status==='menunggu');
+  const badge=document.getElementById('setor-badge');
+  if(badge){
+    if(pending.length){badge.textContent=pending.length;badge.style.display='inline-block';}
+    else badge.style.display='none';
+  }
+}
+
+// ================================================================
 // DASHBOARD
 // ================================================================
 function renderDashboard() {
@@ -1904,6 +2071,31 @@ function renderDashboard() {
 
   const recent=[...S.transaksi].slice(0,8);
   document.getElementById('db-tx').innerHTML=recent.length?recent.map(t=>`<tr><td style="white-space:nowrap">${t.tanggal}<br><span style="color:var(--muted);font-size:.7rem">${t.waktu||''}</span></td><td style="font-size:.76rem">${t.items.map(i=>i.nama+(i.qty>1?'×'+i.qty:'')).join(', ')}</td><td style="color:var(--amber);font-weight:700">${fmt(t.total)}</td><td><span class="badge ${t.pembayaran==='cash'?'badge-green':'badge-blue'}">${t.pembayaran}</span></td><td style="color:var(--muted);font-size:.76rem">${t.kasir_nama}</td><td><button class="btn btn-sm btn-ghost" onclick="showReprintStruk('${t.id}')" title="Cetak ulang">🖨️</button></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Belum ada transaksi</td></tr>';
+
+  // Setoran kasir hari ini
+  const todaySetor=(S.setoranKas||[]).filter(s=>s.tanggal===iso);
+  const pendingSetor=todaySetor.filter(s=>s.status==='menunggu');
+  const dbSetorBadge=document.getElementById('db-setor-badge');
+  if(dbSetorBadge) dbSetorBadge.textContent=pendingSetor.length?`${pendingSetor.length} menunggu konfirmasi`:'';
+  const dbSetorList=document.getElementById('db-setor-list');
+  if(dbSetorList) dbSetorList.innerHTML=todaySetor.length?todaySetor.map(s=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:.8rem">
+      <div style="flex:1">
+        <div style="font-weight:600">${s.kasir_nama} <span class="badge ${s.status==='diterima'?'badge-green':'badge-amber'}" style="font-size:.6rem">${s.status==='diterima'?'✓ Diterima':'⏳ Menunggu'}</span></div>
+        <div style="color:var(--muted);font-size:.7rem">${s.waktu||''}${s.catatan?' · '+s.catatan:''}</div>
+      </div>
+      <strong style="color:var(--amber)">${fmt(s.jumlah)}</strong>
+      ${s.status==='menunggu'&&S.currentUser?.role==='owner'?`<button class="btn btn-sm btn-amber" onclick="konfirmasiSetoran('${s.id}')">✓</button>`:''}
+    </div>`).join(''):'<div class="empty"><p style="font-size:.78rem">Belum ada setoran hari ini</p></div>';
+
+  // Kas shift hari ini
+  const todayShift=(S.kasShift||[]).filter(k=>k.tanggal===iso);
+  const dbKasList=document.getElementById('db-kas-shift-list');
+  if(dbKasList) dbKasList.innerHTML=todayShift.length?todayShift.map(k=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.8rem">
+      <div><div style="font-weight:600">${k.kasir_nama}</div><div style="color:var(--muted);font-size:.7rem">${k.waktu||''}</div></div>
+      <strong style="color:var(--green)">${fmt(k.jumlah_awal)}</strong>
+    </div>`).join(''):'<div class="empty"><p style="font-size:.78rem">Belum ada kasir yang cek kas hari ini</p></div>';
 }
 
 // ================================================================
@@ -1975,19 +2167,38 @@ function renderLaporan() {
       <div style="margin-top:10px;max-height:180px;overflow-y:auto">${keluarPeriod.slice(0,15).map(k=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:.75rem"><div><strong>${k.bahan_nama}</strong><span style="color:var(--muted);margin-left:5px">${k.alasan}</span><div style="color:var(--muted);font-size:.68rem">${k.tanggal} · ${k.kasir_nama}</div></div><span style="color:var(--red);font-weight:700">${fmt(k.kerugian)}</span></div>`).join('')}</div>`
     :'<div class="empty"><p style="font-size:.78rem">Tidak ada pembuangan di periode ini</p></div>';
 
+  // Kas awal & setoran periode ini
+  const kasAwalPeriode=keluarPeriod.length||p==='harian'
+    ? (()=>{
+        const d=p==='harian'?document.getElementById('lap-date').value||todayISO():null;
+        return d ? (S.kasShift||[]).filter(k=>k.tanggal===d) : [];
+      })()
+    : [];
+  const totalKasAwal=kasAwalPeriode.reduce((s,k)=>s+k.jumlah_awal,0);
+  // Setoran filter sama periode
+  let setoranPeriode=[];
+  if(p==='harian'){const d=document.getElementById('lap-date').value||todayISO();setoranPeriode=(S.setoranKas||[]).filter(k=>k.tanggal===d);}
+  else if(p==='mingguan'){const d=new Date(document.getElementById('lap-date').value||todayISO());const day=d.getDay()||7;const mon=new Date(d);mon.setDate(d.getDate()-day+1);const sun=new Date(mon);sun.setDate(mon.getDate()+6);setoranPeriode=(S.setoranKas||[]).filter(k=>{const kd=new Date(k.tanggal);return kd>=mon&&kd<=sun;});}
+  else{const ym=document.getElementById('lap-month').value||todayISO().slice(0,7);setoranPeriode=(S.setoranKas||[]).filter(k=>k.tanggal.startsWith(ym));}
+  const totalSetor=setoranPeriode.filter(s=>s.status==='diterima').reduce((s,k)=>s+k.jumlah,0);
+  const totalSetorPending=setoranPeriode.filter(s=>s.status==='menunggu').reduce((s,k)=>s+k.jumlah,0);
+  const sisaLaci=totalKasAwal+kasCash-totalSetor-totalSetorPending;
+
   // Rekonsiliasi kas
   document.getElementById('lap-rekon').innerHTML=`
-    <div class="ir"><span class="lbl">💵 Kas Tunai (Cash)</span><span class="val" style="color:var(--green);font-weight:700">${fmt(kasCash)}</span></div>
-    <div class="ir"><span class="lbl">📱 QRIS</span><span class="val" style="color:var(--blue,#4e9ef5);font-weight:700">${fmt(kasQris)}</span></div>
-    <div class="ir" style="padding-top:6px;border-top:1px solid var(--border)"><span class="lbl" style="font-weight:600">Total Omzet</span><span class="val">${fmt(rev)}</span></div>
+    <div class="ir"><span class="lbl">💰 Kas Awal Shift</span><span class="val" style="color:var(--muted)">${fmt(totalKasAwal)}</span></div>
+    <div class="ir"><span class="lbl">💵 Penjualan Tunai (Cash)</span><span class="val" style="color:var(--green);font-weight:700">+ ${fmt(kasCash)}</span></div>
+    <div class="ir"><span class="lbl">📱 QRIS (non-tunai)</span><span class="val" style="color:var(--muted)">${fmt(kasQris)}</span></div>
+    ${totalSetor?`<div class="ir"><span class="lbl">💸 Sudah Disetor ke Owner</span><span class="val" style="color:var(--red)">- ${fmt(totalSetor)}</span></div>`:''}
+    ${totalSetorPending?`<div class="ir"><span class="lbl" style="color:var(--amber)">⏳ Setoran Menunggu</span><span class="val" style="color:var(--amber)">- ${fmt(totalSetorPending)}</span></div>`:''}
     <div style="margin-top:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--rs)">
-      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">💡 Rekonsiliasi Kasir</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">💡 Estimasi Sisa di Laci</div>
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:.82rem">Kas yg seharusnya ada di laci:</span>
-        <strong style="color:var(--amber);font-size:1rem">${fmt(kasCash)}</strong>
+        <span style="font-size:.85rem;font-weight:600">Kas yang seharusnya ada:</span>
+        <strong style="color:var(--amber);font-size:1.1rem">${fmt(Math.max(0,sisaLaci))}</strong>
       </div>
-      <div style="font-size:.7rem;color:var(--muted);margin-top:3px">= total transaksi tunai periode ini (belum termasuk modal awal)</div>
     </div>
+    ${setoranPeriode.length?`<div style="margin-top:10px"><div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;font-weight:600">RIWAYAT SETORAN</div>${setoranPeriode.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:.78rem"><div><strong>${s.kasir_nama}</strong><span class="badge ${s.status==='diterima'?'badge-green':'badge-amber'}" style="font-size:.6rem;margin-left:5px">${s.status==='diterima'?'✓ Diterima':'⏳ Menunggu'}</span><div style="color:var(--muted);font-size:.68rem">${s.tanggal} ${s.waktu||''}</div></div><div style="text-align:right"><strong style="color:var(--amber)">${fmt(s.jumlah)}</strong>${s.status==='menunggu'&&S.currentUser?.role==='owner'?`<br><button class="btn btn-sm btn-amber" style="font-size:.65rem;padding:2px 6px;margin-top:2px" onclick="konfirmasiSetoran('${s.id}')">✓ Konfirmasi</button>`:''}</div></div>`).join('')}</div>`:''}
   `;
 
   const mc={};txs.forEach(t=>t.items.forEach(i=>{mc[i.nama]=(mc[i.nama]||0)+i.qty;}));
