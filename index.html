@@ -457,6 +457,19 @@ select.fi{appearance:none;cursor:pointer}
 <!-- TOAST -->
 <div id="toast"></div>
 
+<!-- QRIS FULLSCREEN MODAL (mobile) -->
+<div id="qris-modal" style="display:none;position:fixed;inset:0;z-index:9990;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;gap:14px">
+  <button onclick="closeQrisModal()" style="position:absolute;top:16px;right:16px;background:var(--bg3);border:none;border-radius:50%;width:38px;height:38px;font-size:1.2rem;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center">✕</button>
+  <div style="font-family:'Sora',sans-serif;font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.05em;text-transform:uppercase">Total Pembayaran</div>
+  <div id="qris-modal-amt" style="font-family:'Sora',sans-serif;font-size:2rem;font-weight:800;color:var(--amber)"></div>
+  <div style="background:#fff;border-radius:14px;padding:12px;line-height:0">
+    <div id="qris-modal-canvas" style="width:min(260px,calc(100vw - 80px));height:min(260px,calc(100vw - 80px))"></div>
+  </div>
+  <div id="qris-modal-hint" style="font-size:.8rem;color:var(--muted);text-align:center"></div>
+  <div class="qris-pulse" id="qris-modal-pulse">Menunggu pembayaran...</div>
+  <button class="qris-confirm-btn" onclick="confirmQRISPayment()" style="width:100%;max-width:320px">✅ Konfirmasi Pembayaran Diterima</button>
+</div>
+
 <!-- NOTIF PEMBAYARAN MASUK -->
 <div class="notif-overlay-bg" id="notif-bg" onclick="closeNotifPayment()"></div>
 <div class="notif-payment" id="notif-payment">
@@ -1778,46 +1791,80 @@ function makeQRSvg(data) {
 
 function renderQRIS() {
   const qrisData = getQRISData();
-  const box = document.getElementById('qris-canvas');
-  const hint = document.getElementById('qris-hint');
-  const pulse = document.getElementById('qris-pulse-lbl');
-  const confirmBtn = document.getElementById('qris-confirm-btn');
-  const amtLbl = document.getElementById('qris-amount-lbl');
-
   const sub = S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
   const dk = parseFloat(document.getElementById('dk-val').value)||0;
   const disc = S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
   const tot = Math.max(0,sub-disc);
-  if (amtLbl) amtLbl.textContent = tot > 0 ? fmt(tot) : '';
 
-  if (qrisData) {
-    const svg = makeQRSvg(qrisData);
-    if (svg) {
-      box.innerHTML = svg;
-      box.style.display = 'inline-block';
-      hint.textContent = 'Scan QR · ' + (S.toko.nama||'');
-      if (pulse) pulse.style.display = 'inline-flex';
-      if (confirmBtn) confirmBtn.style.display = 'block';
-    } else {
-      box.style.display = 'none';
-      hint.textContent = '❌ Gagal generate QR code.';
-      if (pulse) pulse.style.display = 'none';
-      if (confirmBtn) confirmBtn.style.display = 'none';
-    }
-  } else {
-    box.style.display = 'none';
-    hint.textContent = '⚠️ QRIS belum diatur. Buka Pengaturan → QRIS.';
+  if (!qrisData) {
+    // Tidak ada QRIS — tampilkan pesan di inline area
+    const hint = document.getElementById('qris-hint');
+    const box  = document.getElementById('qris-canvas');
+    if (box)  box.style.display = 'none';
+    if (hint) hint.textContent  = '⚠️ QRIS belum diatur. Buka Pengaturan → QRIS.';
+    const pulse = document.getElementById('qris-pulse-lbl');
+    const btn   = document.getElementById('qris-confirm-btn');
     if (pulse) pulse.style.display = 'none';
-    if (confirmBtn) confirmBtn.style.display = 'none';
+    if (btn)   btn.style.display   = 'none';
+    return;
   }
+
+  const svg = makeQRSvg(qrisData);
+  if (!svg) {
+    const hint = document.getElementById('qris-hint');
+    if (hint) hint.textContent = '❌ Gagal generate QR code.';
+    return;
+  }
+
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    // Mobile: tampilkan sebagai fullscreen modal
+    const modal = document.getElementById('qris-modal');
+    const mCanvas = document.getElementById('qris-modal-canvas');
+    const mAmt    = document.getElementById('qris-modal-amt');
+    const mHint   = document.getElementById('qris-modal-hint');
+    mCanvas.innerHTML = svg;
+    const svgEl = mCanvas.querySelector('svg');
+    if (svgEl) { svgEl.style.width='100%'; svgEl.style.height='100%'; svgEl.style.display='block'; }
+    if (mAmt)  mAmt.textContent  = fmt(tot);
+    if (mHint) mHint.textContent = 'Minta pelanggan scan QR di bawah · ' + (S.toko.nama||'');
+    modal.style.display = 'flex';
+  } else {
+    // Desktop: tampilkan inline seperti biasa
+    const box  = document.getElementById('qris-canvas');
+    const hint = document.getElementById('qris-hint');
+    const pulse = document.getElementById('qris-pulse-lbl');
+    const confirmBtn = document.getElementById('qris-confirm-btn');
+    const amtLbl = document.getElementById('qris-amount-lbl');
+    box.innerHTML = svg;
+    const svgEl = box.querySelector('svg');
+    if (svgEl) { svgEl.style.width='185px'; svgEl.style.height='185px'; svgEl.style.display='block'; }
+    box.style.display = 'inline-block';
+    if (hint) hint.textContent = 'Scan QR · ' + (S.toko.nama||'');
+    if (amtLbl) amtLbl.textContent = tot > 0 ? fmt(tot) : '';
+    if (pulse) pulse.style.display = 'inline-flex';
+    if (confirmBtn) confirmBtn.style.display = 'block';
+  }
+}
+
+function closeQrisModal() {
+  document.getElementById('qris-modal').style.display = 'none';
+  // Kembali ke Cash agar state bersih
+  setPayMethod('cash');
 }
 
 // Konfirmasi manual QRIS oleh kasir
 async function confirmQRISPayment() {
-  const btn = document.getElementById('qris-confirm-btn');
-  if (btn) { btn.disabled=true; btn.textContent='Memproses...'; }
+  // Disable semua tombol konfirmasi (inline + modal)
+  ['qris-confirm-btn','qris-modal'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    const btn = id==='qris-modal' ? el.querySelector('.qris-confirm-btn') : el;
+    if (btn) { btn.disabled=true; btn.textContent='Memproses...'; }
+  });
   await processCheckout(true);
-  if (btn) { btn.disabled=false; btn.textContent='✅ Konfirmasi Pembayaran Diterima'; }
+  // Tutup modal mobile jika terbuka
+  document.getElementById('qris-modal').style.display = 'none';
 }
 
 // ================================================================
