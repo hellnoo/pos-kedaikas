@@ -851,12 +851,19 @@ select.fi{appearance:none;cursor:pointer}
     <div class="modal-hd"><div class="modal-title" id="sm-title">Tambah Bahan</div><button class="modal-x" onclick="closeModal('stok-modal')">×</button></div>
     <div class="fg"><label class="fl">Nama Bahan</label><input class="fi" id="sm-name" placeholder="Kopi Arabika"></div>
     <div class="g2">
-      <div class="fg"><label class="fl">Satuan</label><select class="fi" id="sm-unit"><option>gram</option><option>ml</option><option>liter</option><option>kg</option><option>pcs</option><option>sdm</option><option>sachet</option></select></div>
+      <div class="fg"><label class="fl">Satuan</label><select class="fi" id="sm-unit" onchange="updateCostLabel()"><option>gram</option><option>ml</option><option>liter</option><option>kg</option><option>pcs</option><option>sdm</option><option>sachet</option></select></div>
       <div class="fg"><label class="fl">Stok Awal</label><input class="fi" type="number" id="sm-stok" placeholder="0"></div>
     </div>
     <div class="g2">
       <div class="fg"><label class="fl">Stok Minimum</label><input class="fi" type="number" id="sm-min" placeholder="100"></div>
-      <div class="fg"><label class="fl">Harga/Satuan (Rp)</label><input class="fi" type="number" id="sm-cost" placeholder="0"></div>
+      <div class="fg">
+        <label class="fl" id="sm-cost-label">Harga/Satuan (Rp)</label>
+        <div style="position:relative">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.82rem;pointer-events:none;z-index:1">Rp</span>
+          <input class="fi" type="text" id="sm-cost" placeholder="0" inputmode="numeric" oninput="formatRpInput(this)" style="padding-left:28px">
+        </div>
+        <div id="sm-cost-hint" style="font-size:.7rem;color:var(--muted);margin-top:4px"></div>
+      </div>
     </div>
     <input type="hidden" id="sm-eid">
     <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('stok-modal')">Batal</button><button class="btn btn-amber" onclick="saveStok()">Simpan</button></div>
@@ -2017,6 +2024,36 @@ function renderStokPage() {
   renderStokLog();
 }
 
+// Format angka ribuan otomatis (195000 → 195.000) untuk input harga
+function formatRpInput(el) {
+  const raw=el.value.replace(/\D/g,'');
+  el.value=raw?parseInt(raw).toLocaleString('id-ID'):'';
+  updateCostHint();
+}
+
+// Update label harga ikut satuan yang dipilih
+function updateCostLabel() {
+  const unit=document.getElementById('sm-unit')?.value||'satuan';
+  const lbl=document.getElementById('sm-cost-label');
+  if(lbl) lbl.textContent=`Harga per ${unit} (Rp)`;
+  updateCostHint();
+}
+
+// Tampilkan hint kontekstual di bawah field harga
+function updateCostHint() {
+  const el=document.getElementById('sm-cost-hint');
+  if(!el) return;
+  const unit=document.getElementById('sm-unit')?.value||'satuan';
+  const raw=document.getElementById('sm-cost')?.value.replace(/\D/g,'')||'';
+  const val=parseInt(raw)||0;
+  if(!val){el.textContent='💡 Dipakai otomatis untuk hitung HPP resep';el.style.color='var(--muted)';return;}
+  // Contoh konversi jika satuan bukan pcs
+  const perUnit=unit==='kg'?`= Rp ${(val/1000).toLocaleString('id-ID')}/gram`:
+                unit==='liter'?`= Rp ${(val/1000).toLocaleString('id-ID')}/ml`:'';
+  el.innerHTML=`✅ HPP akan pakai <strong>Rp ${val.toLocaleString('id-ID')}/${unit}</strong>${perUnit?` <span style="opacity:.7">(${perUnit})</span>`:''}`;
+  el.style.color='var(--accent)';
+}
+
 function openStokModal(id) {
   const b=id?S.bahan.find(x=>x.id===id):null;
   document.getElementById('sm-title').textContent=b?'Edit Bahan':'Tambah Bahan';
@@ -2024,15 +2061,17 @@ function openStokModal(id) {
   document.getElementById('sm-unit').value=b?.satuan||'gram';
   document.getElementById('sm-stok').value=b?.stok||0;
   document.getElementById('sm-min').value=b?.min_stok||0;
-  document.getElementById('sm-cost').value=b?.harga_satuan||0;
+  const costVal=b?.harga_satuan||0;
+  document.getElementById('sm-cost').value=costVal?costVal.toLocaleString('id-ID'):'';
   document.getElementById('sm-eid').value=id||'';
+  updateCostLabel();
   openModal('stok-modal');
 }
 
 async function saveStok() {
   const nama=document.getElementById('sm-name').value.trim();
   if(!nama){toast('Nama bahan wajib!','error');return;}
-  const data={nama,satuan:document.getElementById('sm-unit').value,stok:parseFloat(document.getElementById('sm-stok').value)||0,min_stok:parseFloat(document.getElementById('sm-min').value)||0,harga_satuan:parseFloat(document.getElementById('sm-cost').value)||0};
+  const data={nama,satuan:document.getElementById('sm-unit').value,stok:parseFloat(document.getElementById('sm-stok').value)||0,min_stok:parseFloat(document.getElementById('sm-min').value)||0,harga_satuan:parseFloat(document.getElementById('sm-cost').value.replace(/\./g,'').replace(',','.'))||0};
   const eid=document.getElementById('sm-eid').value;
   loading(true,'Menyimpan...');
   try {
