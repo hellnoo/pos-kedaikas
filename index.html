@@ -1745,8 +1745,17 @@ function setPayMethod(m) {
   document.getElementById('qris-wrap').style.display=m==='qris'?'block':'none';
   const coBtn = document.getElementById('co-btn');
   if(m==='qris') {
-    renderQRIS();
-    // Tombol utama jadi "Tampilkan QR", konfirmasi pakai tombol sendiri
+    // Selalu ambil QRIS terbaru dari DB sebelum render — supaya device kasir
+    // langsung dapat update tanpa perlu reload halaman
+    sb.from('toko').select('qris_string').eq('id',S.toko.id).single()
+      .then(({data})=>{
+        if(data?.qris_string) {
+          S.toko.qris_string = data.qris_string;
+          localStorage.setItem('qris_'+S.toko.id, data.qris_string);
+        }
+        renderQRIS();
+      })
+      .catch(()=>renderQRIS()); // fallback: render pakai data lama
     if(coBtn) coBtn.textContent='📱 Tampilkan QR Bayar';
   } else {
     if(coBtn) coBtn.textContent='Proses Bayar';
