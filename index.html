@@ -7,7 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"
+  onerror="var s=document.createElement('script');s.src='https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js';document.head.appendChild(s)"></script>
 <style>
 /* ===== DARK THEME (default) ===== */
 :root,[data-theme="dark"] {
@@ -1767,15 +1768,33 @@ function renderQRIS() {
 
   if (qrisData && typeof QRCode !== 'undefined') {
     canvas.style.display = 'block';
+    hint.textContent = '';
     QRCode.toCanvas(canvas, qrisData, {width:185,margin:1,color:{dark:'#111111',light:'#ffffff'}}, err => {
       if (err) { canvas.style.display='none'; hint.textContent='Gagal render QR code.'; return; }
       hint.textContent = 'Scan QR · ' + (S.toko.nama||'');
       if (pulse) { pulse.style.display='inline-flex'; }
       if (confirmBtn) { confirmBtn.style.display='block'; }
     });
+  } else if (qrisData) {
+    // Library belum load — retry sampai 5 detik
+    canvas.style.display = 'none';
+    hint.textContent = '⏳ Memuat library QR...';
+    if (pulse) pulse.style.display = 'none';
+    if (confirmBtn) confirmBtn.style.display = 'none';
+    let tries = 0;
+    const waitQR = setInterval(() => {
+      tries++;
+      if (typeof QRCode !== 'undefined') {
+        clearInterval(waitQR);
+        renderQRIS(); // retry setelah library siap
+      } else if (tries >= 25) {
+        clearInterval(waitQR);
+        hint.textContent = '❌ Gagal load library QR. Cek koneksi internet.';
+      }
+    }, 200);
   } else {
     canvas.style.display = 'none';
-    hint.textContent = qrisData ? 'QR library belum siap.' : '⚠️ QRIS belum diatur. Buka Pengaturan → QRIS.';
+    hint.textContent = '⚠️ QRIS belum diatur. Buka Pengaturan → QRIS.';
     if (pulse) pulse.style.display = 'none';
     if (confirmBtn) confirmBtn.style.display = 'none';
   }
@@ -2809,7 +2828,14 @@ function previewQRIS() {
   const val = document.getElementById('set-qris').value.trim();
   const wrap = document.getElementById('set-qris-preview');
   const canvas = document.getElementById('set-qris-canvas');
-  if (!val || typeof QRCode==='undefined') { wrap.style.display='none'; return; }
+  if (!val) { wrap.style.display='none'; return; }
+  if (typeof QRCode==='undefined') {
+    // tunggu library, retry max 5 detik
+    let t=0; const w=setInterval(()=>{ t++;
+      if(typeof QRCode!=='undefined'){ clearInterval(w); previewQRIS(); }
+      else if(t>=25) clearInterval(w);
+    },200); return;
+  }
   QRCode.toCanvas(canvas, val, {width:160,margin:1,color:{dark:'#111',light:'#fff'}}, err => {
     wrap.style.display = err ? 'none' : 'block';
   });
