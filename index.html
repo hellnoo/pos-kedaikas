@@ -9,7 +9,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
-:root {
+/* ===== DARK THEME (default) ===== */
+:root,[data-theme="dark"] {
   --bg:#0f1117;--bg2:#181b23;--bg3:#1e2130;--sidebar:#13151e;
   --border:#2a2d3e;--border2:#353849;
   --text:#e8eaf0;--muted:#6b7080;--muted2:#8b8fa8;
@@ -17,11 +18,32 @@
   --green:#10b981;--green-d:#059669;--green-p:rgba(16,185,129,.12);
   --red:#ef4444;--red-p:rgba(239,68,68,.12);
   --blue:#3b82f6;--blue-p:rgba(59,130,246,.12);
-  --purple:#8b5cf6;
+  --purple:#8b5cf6;--purple-p:rgba(139,92,246,.15);
   --r:12px;--rs:8px;
   --sh:0 4px 20px rgba(0,0,0,.3);
+  --struk-bg:#fff;--struk-text:#111;
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] {
+  --bg:#f0f4fb;--bg2:#ffffff;--bg3:#e8edf6;--sidebar:#ffffff;
+  --border:#dde2ef;--border2:#c8cfe0;
+  --text:#1a1d2e;--muted:#7b829a;--muted2:#5a6075;
+  --amber:#d97706;--amber-d:#b45309;--amber-l:#f59e0b;--amber-p:rgba(217,119,6,.1);
+  --green:#059669;--green-d:#047857;--green-p:rgba(5,150,105,.1);
+  --red:#dc2626;--red-p:rgba(220,38,38,.1);
+  --blue:#2563eb;--blue-p:rgba(37,99,235,.1);
+  --purple:#7c3aed;--purple-p:rgba(124,58,237,.12);
+  --sh:0 4px 20px rgba(0,0,0,.08);
+  --struk-bg:#fff;--struk-text:#111;
+}
+/* Smooth theme transitions */
+body,*{transition:background-color .25s ease,border-color .25s ease,color .2s ease;box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* Override for elements that need snappy transitions */
+.btn,.m-tile,.pin-key,.pos-cat,.pay-btn,.sb-btn,.user-btn{transition:all .18s!important}
+.loader{transition:none!important}
+/* Theme toggle button */
+.theme-toggle{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:all .18s!important}
+.theme-toggle:hover{border-color:var(--amber)}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
@@ -384,6 +406,26 @@ select.fi{appearance:none;cursor:pointer}
   .mt-name{font-size:.72rem}
   .mt-price{font-size:.76rem}
 }
+/* CART QTY DIRECT INPUT */
+.ci-qni{width:38px;text-align:center;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'Sora',sans-serif;font-size:.85rem;font-weight:700;padding:2px 4px;outline:none}
+.ci-qni:focus{border-color:var(--amber)}
+.ci-qni::-webkit-inner-spin-button,.ci-qni::-webkit-outer-spin-button{-webkit-appearance:none}
+/* STOK COUNT ON TILE */
+.mt-stk-ok{font-size:.62rem;color:var(--green)}
+.mt-stk-warn{font-size:.62rem;color:var(--amber)}
+.mt-stk-out{font-size:.62rem;color:var(--red)}
+/* TRUSTED DEVICE BANNER */
+.trusted-banner{background:var(--green-p);border:1px solid rgba(16,185,129,.25);border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.trusted-banner .tb-name{font-weight:700;font-size:.88rem}
+.trusted-banner .tb-sub{font-size:.72rem;color:var(--muted);margin-top:1px}
+/* PIN LOCK TIMER */
+.pin-lock-msg{color:var(--red);font-size:.78rem;text-align:center;margin-top:8px}
+/* LIGHT MODE STRUK FIX */
+[data-theme="light"] .struk{box-shadow:0 2px 12px rgba(0,0,0,.12)}
+[data-theme="light"] .ob-glass{background:rgba(240,244,251,.9)!important}
+[data-theme="light"] #screen-onboarding{background:radial-gradient(ellipse at 20% 50%,#e8f0fe 0%,#f0f4fb 50%,#e4eaf8 100%)}
+[data-theme="light"] .ob-glow1{background:radial-gradient(circle,rgba(217,119,6,.15) 0%,transparent 70%)}
+[data-theme="light"] .ob-glow2{background:radial-gradient(circle,rgba(124,58,237,.12) 0%,transparent 70%)}
 </style>
 </head>
 <body>
@@ -512,6 +554,15 @@ select.fi{appearance:none;cursor:pointer}
       <span style="font-size:1.8rem" id="pin-store-ico">☕</span>
       <div><div class="pin-store-name" id="pin-store-name">—</div><div class="pin-store-sub">Pilih pengguna dan masukkan PIN</div></div>
     </div>
+    <!-- Trusted device shortcut -->
+    <div id="trusted-banner" style="display:none" class="trusted-banner">
+      <div style="font-size:1.5rem">✅</div>
+      <div style="flex:1">
+        <div class="tb-name" id="trusted-name">—</div>
+        <div class="tb-sub">Perangkat ini dipercaya · sesi aktif</div>
+      </div>
+      <button class="btn btn-green btn-sm" onclick="loginTrusted()">Masuk</button>
+    </div>
     <div id="pin-user-list"></div>
     <div class="pin-lbl">Masukkan PIN</div>
     <div class="pin-dots">
@@ -568,6 +619,7 @@ select.fi{appearance:none;cursor:pointer}
       <div class="topbar-right">
         <span class="tb-date-lbl" id="tb-date"></span>
         <div style="width:1px;height:18px;background:var(--border)"></div>
+        <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Ganti tema">🌙</button>
         <span class="clock" id="clock">00:00</span>
       </div>
     </div>
@@ -916,9 +968,15 @@ function showScreen(id) {
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 
-// Simple password hash (base64 — for demo; use bcrypt in production)
-function hashPass(p) { return btoa(unescape(encodeURIComponent(p))); }
-function checkPass(p, h) { return hashPass(p) === h; }
+// SHA-256 hash via Web Crypto API (upgrade dari base64)
+async function hashPass(p) {
+  if (!crypto?.subtle) return btoa(unescape(encodeURIComponent(p))); // fallback older browser
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(p));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+// Backward compat: base64 lama
+function hashPassLegacy(p) { return btoa(unescape(encodeURIComponent(p))); }
+function checkPass(p, h) { return hashPassLegacy(p) === h; }
 
 // ================================================================
 // ONBOARDING
@@ -1159,17 +1217,77 @@ async function loadTokoData() {
 }
 
 // ================================================================
+// TRUSTED DEVICE
+// ================================================================
+function saveTrustedDevice(user) {
+  if(!S.toko?.id) return;
+  localStorage.setItem('kk_trusted_'+S.toko.id, JSON.stringify({
+    id:user.id, nama:user.nama, role:user.role,
+    expires: Date.now() + 8*60*60*1000 // 8 jam
+  }));
+}
+function getTrustedDevice() {
+  const tid = S.toko?.id || localStorage.getItem('kk_toko_id');
+  if(!tid) return null;
+  try {
+    const d = JSON.parse(localStorage.getItem('kk_trusted_'+tid)||'null');
+    if(d && d.expires > Date.now()) return d;
+    localStorage.removeItem('kk_trusted_'+tid);
+    return null;
+  } catch(e) { return null; }
+}
+function loginTrusted() {
+  const d = getTrustedDevice();
+  if(!d) return;
+  const u = S.pengguna.find(x=>x.id===d.id);
+  if(!u) { toast('Sesi kadaluarsa, masuk ulang','info'); return; }
+  S.currentUser = u;
+  initApp();
+}
+
+// ================================================================
+// THEME
+// ================================================================
+function initTheme() {
+  const saved = localStorage.getItem('kk_theme');
+  const sys = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  applyTheme(saved || sys);
+}
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('theme-btn');
+  if(btn) btn.textContent = t==='dark' ? '☀️' : '🌙';
+  localStorage.setItem('kk_theme', t);
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(cur==='dark' ? 'light' : 'dark');
+}
+
+// ================================================================
 // PIN SCREEN
 // ================================================================
 function showPinScreen() {
   document.getElementById('pin-store-name').textContent = S.toko.nama;
   document.getElementById('pin-store-ico').textContent = S.toko.logo_emoji||'☕';
+  // Cek trusted device
+  const trusted = getTrustedDevice();
+  const banner = document.getElementById('trusted-banner');
+  const tName = document.getElementById('trusted-name');
+  if(trusted && S.pengguna.find(x=>x.id===trusted.id)) {
+    if(banner) banner.style.display='flex';
+    if(tName) tName.textContent = trusted.nama;
+    // Auto-select user
+    const u = S.pengguna.find(x=>x.id===trusted.id);
+    if(u) { selectedPinUser=u; renderPinUsers(); }
+  } else {
+    if(banner) banner.style.display='none';
+  }
   renderPinUsers();
   showScreen('pin');
 }
 
 let pinInput='', selectedPinUser=null;
-let pinAttempts=0, pinLockedUntil=0;
 
 function renderPinUsers() {
   document.getElementById('pin-user-list').innerHTML = S.pengguna.map(u=>`
@@ -1199,43 +1317,65 @@ function updatePinDots() {
   for(let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('on',i<pinInput.length);
 }
 
-function checkPin() {
+async function checkPin() {
   const errEl = document.getElementById('pin-err');
-  const now = Date.now();
-  if (now < pinLockedUntil) {
-    const s = Math.ceil((pinLockedUntil - now)/1000);
-    errEl.textContent = `🔒 Terlalu banyak percobaan. Tunggu ${s}s`;
-    pinInput=''; updatePinDots(); return;
-  }
   if (selectedPinUser.pin === 'PENDING') {
     errEl.textContent='⏳ PIN belum aktif. Hubungi admin via WA!';
     pinInput=''; updatePinDots(); return;
   }
-  const plain = selectedPinUser.pin === pinInput;
-  const hashed = selectedPinUser.pin === hashPass(pinInput);
-  if (plain || hashed) {
-    pinAttempts=0; pinLockedUntil=0;
-    if (plain) {
-      const h = hashPass(pinInput);
-      sb.from('pengguna').update({pin:h}).eq('id',selectedPinUser.id);
-      const u = S.pengguna.find(x=>x.id===selectedPinUser.id);
-      if(u) u.pin=h;
-      selectedPinUser.pin=h;
+  // Cek lockout per-user di localStorage (persist setelah refresh)
+  const lockKey = `pin_lock_${S.toko?.id}_${selectedPinUser.id}`;
+  const lockUntil = parseInt(localStorage.getItem(lockKey)||0);
+  if (Date.now() < lockUntil) {
+    pinInput=''; updatePinDots();
+    startLockCountdown(lockUntil); return;
+  }
+  // Verifikasi: SHA-256 baru / base64 legacy / plaintext (urutan prioritas)
+  const h256 = await hashPass(pinInput);
+  const hLeg  = hashPassLegacy(pinInput);
+  const match256  = selectedPinUser.pin === h256;
+  const matchLeg  = selectedPinUser.pin === hLeg;
+  const matchPlain = selectedPinUser.pin === pinInput;
+  if (match256 || matchLeg || matchPlain) {
+    // Reset counter
+    localStorage.removeItem(lockKey);
+    localStorage.removeItem(`pin_att_${S.toko?.id}_${selectedPinUser.id}`);
+    // Upgrade PIN ke SHA-256 kalau masih lama
+    if (!match256) {
+      sb.from('pengguna').update({pin:h256}).eq('id',selectedPinUser.id);
+      const u=S.pengguna.find(x=>x.id===selectedPinUser.id);
+      if(u) u.pin=h256; selectedPinUser.pin=h256;
     }
+    saveTrustedDevice(selectedPinUser);
     S.currentUser = selectedPinUser;
     initApp();
   } else {
-    pinAttempts++;
-    if (pinAttempts >= 5) {
-      pinLockedUntil = Date.now() + 30000;
-      pinAttempts = 0;
-      errEl.textContent='🔒 Akun dikunci 30 detik! Terlalu banyak percobaan salah.';
+    const attKey = `pin_att_${S.toko?.id}_${selectedPinUser.id}`;
+    const att = (parseInt(localStorage.getItem(attKey)||0)) + 1;
+    localStorage.setItem(attKey, att);
+    if (att >= 5) {
+      const until = Date.now() + 60000; // 60 detik
+      localStorage.setItem(lockKey, until);
+      localStorage.removeItem(attKey);
+      startLockCountdown(until);
     } else {
-      errEl.textContent=`❌ PIN salah! ${5-pinAttempts} percobaan tersisa.`;
+      errEl.textContent=`❌ PIN salah! ${5-att} percobaan tersisa.`;
+      setTimeout(()=>{ if(errEl.textContent.includes('salah')) errEl.textContent=''; },2500);
     }
     pinInput=''; updatePinDots();
-    setTimeout(()=>errEl.textContent='',2500);
   }
+}
+let _lockTimer=null;
+function startLockCountdown(until) {
+  clearInterval(_lockTimer);
+  const errEl = document.getElementById('pin-err');
+  const tick = ()=>{
+    const s=Math.ceil((until-Date.now())/1000);
+    if(s<=0){ clearInterval(_lockTimer); if(errEl) errEl.textContent=''; return; }
+    if(errEl) errEl.textContent=`🔒 Terlalu banyak percobaan. Tunggu ${s}s`;
+  };
+  tick();
+  _lockTimer=setInterval(tick,500);
 }
 
 // ================================================================
@@ -1259,6 +1399,7 @@ function initApp() {
   updateClock();
   requestNotifPermission();
   initRealtimeNotif();
+  applyTheme(localStorage.getItem('kk_theme') || (window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'));
 }
 
 function updateClock() {
@@ -1323,11 +1464,20 @@ function renderPOS() {
   if(q) items=items.filter(m=>m.nama.toLowerCase().includes(q));
   document.getElementById('pos-grid').innerHTML=items.map(m=>{
     const ok=canMake(m.id);
+    const ings=S.resep.filter(r=>r.menu_id===m.id);
+    let stokLabel='';
+    if(!ok){ stokLabel=`<div class="mt-stk-out">Stok habis</div>`; }
+    else if(ings.length){
+      const minPorsi=Math.min(...ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?Math.floor(b.stok/r.qty):999;}));
+      stokLabel=minPorsi<=5&&minPorsi>0
+        ?`<div class="mt-stk-warn">Sisa ~${minPorsi}</div>`
+        :`<div class="mt-stk-ok">~${minPorsi} porsi</div>`;
+    }
     return `<div class="m-tile ${ok?'':'oos'}" onclick="addToCart('${m.id}')">
       <div class="mt-ico">${m.icon||'🍽️'}</div>
       <div class="mt-name">${m.nama}</div>
       <div class="mt-price">${fmt(m.harga)}</div>
-      <div class="mt-stk">${ok?'Tersedia':'Stok habis'}</div>
+      ${stokLabel}
     </div>`;
   }).join('')||'<div class="empty"><div class="empty-ico">🍽️</div><p>Tidak ada menu</p></div>';
 }
@@ -1342,6 +1492,14 @@ function canMake(menuId) {
 
 function addToCart(menuId) {
   const m=S.menu.find(x=>x.id===menuId);
+  if(!m) return; // null-safe
+  // Cek stok sebelum tambah
+  const ings=S.resep.filter(r=>r.menu_id===menuId);
+  const newQty=(S.cart.find(i=>i.menuId===menuId)?.qty||0)+1;
+  if(ings.length) {
+    const short=ings.find(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b&&b.stok<r.qty*newQty;});
+    if(short){ const b=S.bahan.find(x=>x.id===short.bahan_id); toast(`⚠️ Stok ${b?.nama||''} tidak cukup untuk ${newQty} porsi`,'error'); return; }
+  }
   const ex=S.cart.find(i=>i.menuId===menuId);
   if(ex) ex.qty++; else S.cart.push({menuId,nama:m.nama,harga:m.harga,hpp:m.hpp||0,qty:1});
   renderCart();
@@ -1349,6 +1507,14 @@ function addToCart(menuId) {
 function removeFromCart(menuId) {
   const i=S.cart.findIndex(x=>x.menuId===menuId);
   if(i>=0){S.cart[i].qty--;if(S.cart[i].qty<=0)S.cart.splice(i,1);}
+  renderCart();
+}
+function setCartQty(menuId, val) {
+  const n = parseInt(val);
+  const i = S.cart.findIndex(x=>x.menuId===menuId);
+  if(i<0) return;
+  if(!n || n<=0) { S.cart.splice(i,1); }
+  else { S.cart[i].qty = Math.min(n,99); }
   renderCart();
 }
 function clearCart(){
@@ -1361,10 +1527,12 @@ function renderCart() {
   const body=document.getElementById('cart-body');
   if(!S.cart.length) { body.innerHTML='<div class="empty"><div class="empty-ico">🛒</div><p style="font-size:.78rem">Belum ada item</p></div>'; }
   else { body.innerHTML=S.cart.map(i=>`<div class="ci">
-    <div style="flex:1"><div class="ci-name">${i.nama}</div><div class="ci-p">${fmt(i.harga)} × ${i.qty}</div></div>
+    <div style="flex:1"><div class="ci-name">${i.nama}</div><div class="ci-p">${fmt(i.harga)} × ${i.qty} = <strong>${fmt(i.harga*i.qty)}</strong></div></div>
     <div class="ci-qty">
       <button class="ci-qb" onclick="removeFromCart('${i.menuId}')">−</button>
-      <span class="ci-qn">${i.qty}</span>
+      <input class="ci-qni" type="number" value="${i.qty}" min="1" max="99"
+        onchange="setCartQty('${i.menuId}',this.value)"
+        onclick="this.select()" onfocus="this.select()">
       <button class="ci-qb" onclick="addToCart('${i.menuId}')">+</button>
     </div>
   </div>`).join(''); }
@@ -1523,14 +1691,14 @@ function initRealtimeNotif() {
 
 function calcChange() {
   const sub=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
-  const dk=parseFloat(document.getElementById('dk-val').value)||0;
+  const dk=Math.max(0,parseFloat(document.getElementById('dk-val').value)||0); // no negative discount
   const disc=S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
   const tot=Math.max(0,sub-disc);
   const discEl=document.getElementById('c-disc');
   if(disc>0){discEl.style.display='flex';document.getElementById('c-disc-val').textContent='- '+fmt(disc);}
   else discEl.style.display='none';
   document.getElementById('c-tot').textContent=fmt(tot);
-  const cash=parseInt(document.getElementById('cash-in').value)||0;
+  const cash=parseFloat(document.getElementById('cash-in').value)||0;
   const chg=cash-tot;
   document.getElementById('change-disp').textContent=chg>=0?fmt(chg):'—';
   document.getElementById('change-disp').style.color=chg>=0?'var(--green)':'var(--red)';
@@ -1547,12 +1715,21 @@ async function processCheckout(fromQRISConfirm=false) {
     return;
   }
   const sub=S.cart.reduce((s,i)=>s+i.harga*i.qty,0);
-  const dk=parseFloat(document.getElementById('dk-val').value)||0;
+  const dk=Math.max(0,parseFloat(document.getElementById('dk-val').value)||0);
   const disc=S.diskonType==='persen'?Math.round(sub*Math.min(dk,100)/100):Math.min(dk,sub);
   const tot=Math.max(0,sub-disc);
   const totHpp=S.cart.reduce((s,i)=>s+(i.hpp||0)*i.qty,0);
-  const cash=parseInt(document.getElementById('cash-in').value)||tot;
+  const cash=parseFloat(document.getElementById('cash-in').value)||tot;
   const chg=S.payMethod==='cash'?cash-tot:0;
+
+  // Pre-validasi stok sebelum proses
+  for(const item of S.cart) {
+    const ings=S.resep.filter(r=>r.menu_id===item.menuId);
+    for(const ing of ings) {
+      const b=S.bahan.find(x=>x.id===ing.bahan_id);
+      if(b && b.stok < ing.qty*item.qty) { toast(`❌ Stok ${b.nama} tidak cukup untuk checkout!`,'error'); return; }
+    }
+  }
 
   loading(true,'Menyimpan transaksi...');
   try {
@@ -2071,7 +2248,10 @@ async function voidTransaksi(id) {
 function showReprintStruk(id) {
   const t = S.transaksi.find(x=>x.id===id);
   if (!t) { toast('Data tidak ditemukan','error'); return; }
-  const nomorTrx = `TRX-${(t.tanggal||'').replace(/-/g,'')}-${id.slice(0,4).toUpperCase()}`;
+  // Nomor urut berdasarkan posisi di hari yang sama (konsisten dgn checkout asli)
+  const dayTx=[...S.transaksi].filter(x=>x.tanggal===t.tanggal).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const idx=dayTx.findIndex(x=>x.id===id)+1;
+  const nomorTrx=`TRX-${(t.tanggal||'').replace(/-/g,'')}-${String(idx).padStart(3,'0')}`;
   const sub = t.items ? t.items.reduce((s,i)=>s+(i.harga||0)*(i.qty||1),0) : t.total;
   showStruk({...t, sub, disc: Math.max(0, sub - t.total), nomorTrx});
 }
@@ -2247,7 +2427,7 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('ope
 // ================================================================
 // INIT
 // ================================================================
-window.addEventListener('load', ()=>{ tryLoadApp(); });
+window.addEventListener('load', ()=>{ initTheme(); tryLoadApp(); });
 
 async function tryLoadApp(isRetry=false) {
   const tid = localStorage.getItem('kk_toko_id');
