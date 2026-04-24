@@ -480,41 +480,63 @@ select.fi{appearance:none;cursor:pointer}
     </div>
     <!-- RIGHT: form -->
     <div class="ob-right">
+      <!-- Mobile header -->
       <div class="ob-enter" style="text-align:center;margin-bottom:20px;display:block" id="ob-mobile-header">
         <div style="font-family:'Sora',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-1px;color:var(--amber)">KedaiKas</div>
         <div style="font-size:.65rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:3px">Kasir UMKM Nusantara</div>
       </div>
-      <div class="ob-glass ob-enter-d1" style="border-radius:20px;padding:32px 28px">
-        <div class="ob-enter-d1" style="text-align:center;margin-bottom:22px">
-          <div style="font-size:2.6rem;margin-bottom:8px;animation:obPulse 2s ease-in-out infinite">👋</div>
-          <div style="font-family:'Sora',sans-serif;font-size:1.1rem;font-weight:700">Selamat datang!</div>
-          <div style="font-size:.8rem;color:var(--muted);margin-top:4px">Setup kedai kamu dalam 30 detik. Gratis, tanpa daftar.</div>
-        </div>
-        <div class="ob-enter-d2">
-          <div class="fg"><label class="fl">Nama Kedai / Toko</label><input class="fi" id="ob-nama" placeholder="Kedai Kopi Nusantara" autofocus style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
-          <div class="fg"><label class="fl">Nama Kamu (Pemilik)</label><input class="fi" id="ob-owner" placeholder="Budi" onkeydown="if(event.key==='Enter')doOnboarding()" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
-          <div class="fg"><label class="fl">Alamat <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-alamat" placeholder="Jl. Merdeka No. 1" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
-          <div class="fg" style="margin-bottom:18px"><label class="fl">Telepon <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-telp" type="tel" placeholder="0812xxxxxxxx" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
-        </div>
-        <div class="ob-enter-d3">
-          <button class="btn btn-amber ob-btn-glow" style="width:100%;padding:14px;font-size:.95rem;border-radius:10px;font-family:'Sora',sans-serif;font-weight:700;letter-spacing:.3px" onclick="doOnboarding()" id="ob-btn">🚀 Mulai Sekarang</button>
+
+      <div class="ob-glass ob-enter-d1" style="border-radius:20px;padding:28px 28px">
+
+        <!-- TAB SWITCHER -->
+        <div style="display:flex;gap:6px;background:rgba(0,0,0,.25);padding:5px;border-radius:12px;margin-bottom:24px">
+          <button id="ob-tab-masuk" onclick="obTab('masuk')" style="flex:1;padding:11px 8px;border-radius:9px;border:none;font-weight:700;cursor:pointer;font-size:.88rem;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;background:var(--amber);color:#000">🔑 Masuk</button>
+          <button id="ob-tab-daftar" onclick="obTab('daftar')" style="flex:1;padding:11px 8px;border-radius:9px;border:none;font-weight:600;cursor:pointer;font-size:.88rem;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;background:transparent;color:var(--muted)">✨ Daftar Baru</button>
         </div>
 
-        <!-- RECONNECT -->
-        <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
-          <button onclick="toggleReconnect()" style="background:none;border:none;color:var(--muted);font-size:.78rem;cursor:pointer;width:100%;text-align:center;font-family:'Plus Jakarta Sans',sans-serif" id="reconnect-toggle">Sudah punya toko sebelumnya? Hubungkan kembali →</button>
-          <div id="reconnect-box" style="display:none;margin-top:12px">
+        <!-- PANEL: MASUK -->
+        <div id="ob-panel-masuk">
+          <div style="text-align:center;margin-bottom:20px">
+            <div style="font-size:2.2rem;margin-bottom:8px">👋</div>
+            <div style="font-family:'Sora',sans-serif;font-size:1rem;font-weight:700">Selamat datang kembali!</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:4px">Cari toko kamu untuk masuk</div>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="fl">Nama Toko</label>
             <div style="display:flex;gap:7px">
-              <input class="fi" id="rc-nama" placeholder="Ketik nama toko kamu..." style="flex:1" onkeydown="if(event.key==='Enter')doReconnect()">
-              <button class="btn btn-ghost" onclick="doReconnect()" id="rc-btn">Cari</button>
+              <input class="fi" id="rc-nama" placeholder="Ketik nama toko kamu..." style="flex:1;background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)" onkeydown="if(event.key==='Enter')doReconnect()">
+              <button class="btn btn-amber ob-btn-glow" onclick="doReconnect()" id="rc-btn" style="white-space:nowrap">Cari</button>
             </div>
-            <div id="rc-results" style="margin-top:8px"></div>
+          </div>
+          <div id="rc-results" style="margin-bottom:8px"></div>
+          <div style="margin-top:12px;text-align:center">
+            <span style="font-size:.75rem;color:var(--muted)">Belum punya toko? </span>
+            <button onclick="obTab('daftar')" style="background:none;border:none;color:var(--amber);font-size:.75rem;cursor:pointer;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif">Daftar gratis →</button>
           </div>
         </div>
 
-        <a href="https://wa.me/6281245400031" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;padding:10px;border-radius:var(--rs);background:#25d366;color:#fff;font-size:.82rem;font-weight:600;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity .18s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <!-- PANEL: DAFTAR BARU -->
+        <div id="ob-panel-daftar" style="display:none">
+          <div style="text-align:center;margin-bottom:20px">
+            <div style="font-size:2.2rem;margin-bottom:8px;animation:obPulse 2s ease-in-out infinite">🚀</div>
+            <div style="font-family:'Sora',sans-serif;font-size:1rem;font-weight:700">Setup kedai kamu</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:4px">Gratis, tanpa daftar akun, 30 detik</div>
+          </div>
+          <div class="fg"><label class="fl">Nama Kedai / Toko</label><input class="fi" id="ob-nama" placeholder="Kedai Kopi Nusantara" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <div class="fg"><label class="fl">Nama Kamu (Pemilik)</label><input class="fi" id="ob-owner" placeholder="Budi" onkeydown="if(event.key==='Enter')doOnboarding()" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <div class="fg"><label class="fl">Alamat <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-alamat" placeholder="Jl. Merdeka No. 1" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <div class="fg" style="margin-bottom:18px"><label class="fl">Telepon <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-telp" type="tel" placeholder="0812xxxxxxxx" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <button class="btn btn-amber ob-btn-glow" style="width:100%;padding:14px;font-size:.95rem;border-radius:10px;font-family:'Sora',sans-serif;font-weight:700;letter-spacing:.3px" onclick="doOnboarding()" id="ob-btn">🚀 Mulai Sekarang</button>
+          <div style="margin-top:12px;text-align:center">
+            <span style="font-size:.75rem;color:var(--muted)">Sudah punya toko? </span>
+            <button onclick="obTab('masuk')" style="background:none;border:none;color:var(--amber);font-size:.75rem;cursor:pointer;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif">Masuk di sini →</button>
+          </div>
+        </div>
+
+        <!-- WA BUTTON (always visible) -->
+        <a href="https://wa.me/6281245400031" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;padding:10px;border-radius:var(--rs);background:#25d366;color:#fff;font-size:.82rem;font-weight:600;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity .18s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          Hubungi kami via WhatsApp
+          Butuh bantuan? Chat via WhatsApp
         </a>
       </div>
     </div>
@@ -1229,24 +1251,38 @@ function initParticles() {
   tick();
 }
 
+function obTab(t) {
+  const pMasuk  = document.getElementById('ob-panel-masuk');
+  const pDaftar = document.getElementById('ob-panel-daftar');
+  const bMasuk  = document.getElementById('ob-tab-masuk');
+  const bDaftar = document.getElementById('ob-tab-daftar');
+  if (!pMasuk||!pDaftar||!bMasuk||!bDaftar) return;
+  pMasuk.style.display  = t==='masuk'  ? '' : 'none';
+  pDaftar.style.display = t==='daftar' ? '' : 'none';
+  bMasuk.style.background  = t==='masuk'  ? 'var(--amber)' : 'transparent';
+  bMasuk.style.color        = t==='masuk'  ? '#000'         : 'var(--muted)';
+  bMasuk.style.fontWeight   = t==='masuk'  ? '700'          : '600';
+  bDaftar.style.background = t==='daftar' ? 'var(--amber)' : 'transparent';
+  bDaftar.style.color       = t==='daftar' ? '#000'         : 'var(--muted)';
+  bDaftar.style.fontWeight  = t==='daftar' ? '700'          : '600';
+  if (t==='masuk')  setTimeout(()=>document.getElementById('rc-nama')?.focus(), 80);
+  if (t==='daftar') setTimeout(()=>document.getElementById('ob-nama')?.focus(),  80);
+}
+
 function showOnboarding() {
   showScreen('onboarding');
   initParticles();
-  document.getElementById('reconnect-box').style.display='none';
-  document.getElementById('rc-results').innerHTML='';
-  document.getElementById('rc-nama').value='';
-  setTimeout(()=>document.getElementById('ob-nama')?.focus(),100);
+  // reset form state
+  const rcRes = document.getElementById('rc-results');
+  const rcNama = document.getElementById('rc-nama');
+  if (rcRes)  rcRes.innerHTML = '';
+  if (rcNama) rcNama.value   = '';
+  // smart default: kalau pernah punya toko → tab Masuk, belum pernah → tab Daftar Baru
+  const pernah = !!localStorage.getItem('kk_toko_id');
+  obTab(pernah ? 'masuk' : 'daftar');
 }
 
-function toggleReconnect() {
-  const box = document.getElementById('reconnect-box');
-  const isOpen = box.style.display !== 'none';
-  box.style.display = isOpen ? 'none' : 'block';
-  document.getElementById('reconnect-toggle').textContent = isOpen
-    ? 'Sudah punya toko sebelumnya? Hubungkan kembali →'
-    : '✕ Tutup';
-  if (!isOpen) setTimeout(()=>document.getElementById('rc-nama').focus(), 100);
-}
+function toggleReconnect() { obTab('masuk'); } // legacy alias → redirect ke tab Masuk
 
 async function doReconnect() {
   const nama = document.getElementById('rc-nama').value.trim();
