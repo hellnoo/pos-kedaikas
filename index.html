@@ -839,7 +839,7 @@ select.fi{appearance:none;cursor:pointer}
     </div>
     <div class="g2">
       <div class="fg"><label class="fl">Harga Jual (Rp)</label><input class="fi" type="number" id="mm-price" placeholder="25000"></div>
-      <div class="fg"><label class="fl">HPP/Modal (Rp)</label><input class="fi" type="number" id="mm-hpp" placeholder="12000"></div>
+      <div class="fg"><label class="fl">HPP/Modal (Rp)</label><div style="display:flex;gap:6px;align-items:stretch"><input class="fi" type="number" id="mm-hpp" placeholder="12000" style="flex:1"><button class="btn btn-ghost btn-sm" id="mm-hpp-calc" onclick="fillHPPFromResep()" title="Hitung dari resep" style="display:none;white-space:nowrap;font-size:.75rem">⚙️ Dari Resep</button></div></div>
     </div>
     <input type="hidden" id="mm-eid">
     <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('menu-modal')">Batal</button><button class="btn btn-amber" onclick="saveMenu()">Simpan</button></div>
@@ -878,6 +878,7 @@ select.fi{appearance:none;cursor:pointer}
     <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px" id="resep-modal-sub"></p>
     <div id="resep-rows"></div>
     <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="addResepRow()">+ Tambah Bahan</button>
+    <div id="resep-hpp-preview" style="margin-top:10px;padding:8px 12px;border-radius:var(--rs);background:var(--bg3);font-size:.82rem;text-align:center"></div>
     <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('resep-modal')">Batal</button><button class="btn btn-amber" onclick="saveResep()">Simpan Resep</button></div>
   </div>
 </div>
@@ -1933,6 +1934,8 @@ function openMenuModal(id) {
   document.getElementById('mm-hpp').value=m?.hpp||'';
   document.getElementById('mm-status').value=m?.status||'aktif';
   document.getElementById('mm-eid').value=id||'';
+  const calcBtn=document.getElementById('mm-hpp-calc');
+  if(calcBtn) calcBtn.style.display=(id&&S.resep.some(r=>r.menu_id===id))?'':'none';
   openModal('menu-modal');
 }
 
@@ -1956,6 +1959,47 @@ async function deleteMenu(id) {
   await sb.from('menu').delete().eq('id',id);
   S.menu=S.menu.filter(m=>m.id!==id);
   loading(false);renderMenuPage();renderPOS();toast('Menu dihapus','info');
+}
+
+// Hitung HPP dari resep: Σ(qty × harga_satuan bahan)
+function calcHPPFromResep(menuId) {
+  const ings=S.resep.filter(r=>r.menu_id===menuId);
+  if(!ings.length) return null;
+  return ings.reduce((s,r)=>{
+    const b=S.bahan.find(x=>x.id===r.bahan_id);
+    return s+(b&&b.harga_satuan?b.harga_satuan*r.qty:0);
+  },0);
+}
+
+// Isi kolom HPP di menu modal dari hasil kalkulasi resep
+function fillHPPFromResep() {
+  const id=document.getElementById('mm-eid').value;
+  if(!id){toast('Simpan menu dulu, lalu atur resepnya','info');return;}
+  const hpp=calcHPPFromResep(id);
+  if(hpp===null){toast('Menu ini belum punya resep','info');return;}
+  if(hpp===0){toast('Isi harga satuan bahan di halaman Stok dulu','info');return;}
+  document.getElementById('mm-hpp').value=hpp;
+  toast(`HPP dari resep: ${fmt(hpp)}`,'success');
+}
+
+// Update preview HPP di resep modal (baca nilai langsung dari DOM)
+function updateResepHPPPreview() {
+  const ings=S.resep.filter(r=>r.menu_id===S.editResepMenuId);
+  let total=0;
+  ings.forEach((_,i)=>{
+    const bid=document.getElementById('rr-bahan-'+i)?.value;
+    const qty=parseFloat(document.getElementById('rr-qty-'+i)?.value)||0;
+    const b=S.bahan.find(x=>x.id===bid);
+    total+=(b&&b.harga_satuan?b.harga_satuan*qty:0);
+  });
+  const el=document.getElementById('resep-hpp-preview');
+  if(!el)return;
+  const hasPrice=S.bahan.some(b=>b.harga_satuan>0);
+  if(!ings.length){el.innerHTML=`<span style="color:var(--muted)">Tambah bahan untuk lihat estimasi HPP</span>`;return;}
+  if(!hasPrice){el.innerHTML=`<span style="color:var(--muted)">💡 Isi harga satuan bahan di halaman Stok untuk hitung HPP otomatis</span>`;return;}
+  el.innerHTML=total>0
+    ?`<span style="color:var(--accent);font-weight:700">💰 Estimasi HPP: ${fmt(total)}/porsi</span>`
+    :`<span style="color:var(--muted)">Belum ada bahan yang punya harga satuan</span>`;
 }
 
 // ================================================================
@@ -2033,9 +2077,17 @@ function renderResepPage() {
   document.getElementById('resep-list').innerHTML=S.menu.filter(m=>m.status==='aktif').map(m=>{
     const ings=S.resep.filter(r=>r.menu_id===m.id);
     const ingText=ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?`${b.nama} ${r.qty} ${b.satuan}`:'?';}).join(', ');
+    const hpp=calcHPPFromResep(m.id);
+    const hppBadge=hpp!==null&&hpp>0
+      ?`<span style="font-size:.7rem;padding:2px 8px;border-radius:20px;background:var(--bg3);color:var(--accent);font-weight:600;margin-left:6px">HPP ${fmt(hpp)}</span>`:'';
+    const marginInfo=hpp&&m.harga
+      ?`<span style="font-size:.7rem;color:var(--muted);margin-left:4px">• margin ${(((m.harga-hpp)/m.harga)*100).toFixed(0)}%</span>`:'';
     return `<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px">
       <div style="font-size:1.7rem;flex-shrink:0">${m.icon||'🍽️'}</div>
-      <div style="flex:1"><div style="font-weight:700;margin-bottom:3px">${m.nama}</div><div style="font-size:.75rem;color:var(--muted)">${ingText||'Belum ada resep'}</div></div>
+      <div style="flex:1">
+        <div style="font-weight:700;margin-bottom:3px;display:flex;align-items:center;flex-wrap:wrap">${m.nama}${hppBadge}${marginInfo}</div>
+        <div style="font-size:.75rem;color:var(--muted)">${ingText||'Belum ada resep'}</div>
+      </div>
       <button class="btn btn-ghost btn-sm" onclick="openResepModal('${m.id}')">Edit</button>
     </div>`;
   }).join('')||'<div class="empty"><div class="empty-ico">📋</div><p>Tidak ada menu aktif</p></div>';
@@ -2054,10 +2106,11 @@ function renderResepRows() {
   const ings=S.resep.filter(r=>r.menu_id===S.editResepMenuId);
   document.getElementById('resep-rows').innerHTML=ings.map((r,i)=>`
     <div style="display:grid;grid-template-columns:1fr 80px auto;gap:7px;margin-bottom:7px;align-items:center">
-      <select class="fi" id="rr-bahan-${i}" style="font-size:.8rem">${S.bahan.map(b=>`<option value="${b.id}" ${b.id===r.bahan_id?'selected':''}>${b.nama} (${b.satuan})</option>`).join('')}</select>
-      <input class="fi" type="number" id="rr-qty-${i}" value="${r.qty}" style="font-size:.8rem" placeholder="Qty">
+      <select class="fi" id="rr-bahan-${i}" style="font-size:.8rem" onchange="updateResepHPPPreview()">${S.bahan.map(b=>`<option value="${b.id}" ${b.id===r.bahan_id?'selected':''}>${b.nama} (${b.satuan})</option>`).join('')}</select>
+      <input class="fi" type="number" id="rr-qty-${i}" value="${r.qty}" style="font-size:.8rem" placeholder="Qty" oninput="updateResepHPPPreview()">
       <button class="btn btn-red btn-sm" onclick="removeResepRow(${i})">✕</button>
     </div>`).join('')||'<p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Belum ada bahan.</p>';
+  updateResepHPPPreview();
 }
 
 function addResepRow() {
@@ -2092,8 +2145,18 @@ async function saveResep() {
     const menuIds=S.menu.map(m=>m.id);
     const {data}=menuIds.length ? await sb.from('resep').select('*').in('menu_id',menuIds) : {data:[]};
     S.resep=data||[];
-    loading(false);closeModal('resep-modal');renderResepPage();renderPOS();
-    toast('Resep disimpan!','success');
+    // Auto-update HPP di menu jika semua bahan punya harga_satuan
+    const calculatedHPP=newResep.reduce((s,r)=>{
+      const b=S.bahan.find(x=>x.id===r.bahan_id);
+      return s+(b&&b.harga_satuan?b.harga_satuan*r.qty:0);
+    },0);
+    if(calculatedHPP>0) {
+      await sb.from('menu').update({hpp:calculatedHPP}).eq('id',S.editResepMenuId);
+      const mi=S.menu.findIndex(x=>x.id===S.editResepMenuId);
+      if(mi>=0) S.menu[mi].hpp=calculatedHPP;
+    }
+    loading(false);closeModal('resep-modal');renderResepPage();renderMenuPage();renderPOS();
+    toast(calculatedHPP>0?`Resep disimpan! HPP diupdate → ${fmt(calculatedHPP)}`:'Resep disimpan!','success');
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
 
