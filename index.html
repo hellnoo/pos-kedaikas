@@ -315,7 +315,7 @@ select.fi{appearance:none;cursor:pointer}
 
 /* QRIS QR */
 .qris-box{text-align:center;padding:10px 0 6px}
-.qris-box .qr-box{display:inline-block;border-radius:8px;background:#fff;padding:6px;line-height:0}.qris-box .qr-box svg{width:185px;height:185px;display:block}
+.qris-box .qr-box{display:inline-block;border-radius:10px;background:#fff;padding:8px;line-height:0;max-width:calc(100vw - 64px)}.qris-box .qr-box svg{width:min(185px,calc(100vw - 80px));height:min(185px,calc(100vw - 80px));display:block}
 .qris-hint{font-size:.72rem;color:var(--muted);margin-top:6px}
 
 /* QRIS WAITING STATE */
@@ -2846,7 +2846,7 @@ function previewQRIS() {
     box.innerHTML = svg;
     // scale to 160px via CSS on the SVG inside
     const svgEl = box.querySelector('svg');
-    if (svgEl) { svgEl.style.width='160px'; svgEl.style.height='160px'; svgEl.style.display='block'; }
+    if (svgEl) { svgEl.style.width='min(160px, calc(100vw - 80px))'; svgEl.style.height='min(160px, calc(100vw - 80px))'; svgEl.style.display='block'; }
     wrap.style.display = 'block';
   } else {
     wrap.style.display = 'none';
