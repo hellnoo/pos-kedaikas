@@ -846,9 +846,33 @@ select.fi{appearance:none;cursor:pointer}
           <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Pindah ke toko lain atau reset perangkat ini. Data toko lama tidak hilang, tapi kamu perlu setup ulang di perangkat ini.</p>
           <button class="btn btn-red" onclick="confirmGantiToko()">🔄 Ganti / Reset Toko</button>
         </div>
+        <div class="set-section" style="border-color:rgba(239,68,68,.5)">
+          <div class="set-section-title" style="color:var(--red)">🗑️ Hapus Toko Permanen</div>
+          <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Hapus toko ini beserta <strong>seluruh data</strong> (menu, stok, transaksi, pengguna, dll). <strong>Tidak bisa dikembalikan!</strong></p>
+          <button class="btn btn-red" style="opacity:.85" onclick="openHapusTokoModal()">🗑️ Hapus Toko Ini</button>
+        </div>
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- HAPUS TOKO -->
+<div class="overlay" id="hapus-toko-modal">
+  <div class="modal" style="max-width:400px;border:1.5px solid var(--red)">
+    <div class="modal-hd"><div class="modal-title" style="color:var(--red)">🗑️ Hapus Toko Permanen</div><button class="modal-x" onclick="closeModal('hapus-toko-modal')">×</button></div>
+    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:var(--red)">
+      ⚠️ Aksi ini akan menghapus <strong>seluruh data toko</strong> secara permanen — menu, stok, transaksi, pengguna, laporan. Tidak bisa dikembalikan!
+    </div>
+    <div class="fg">
+      <label class="fl">Ketik nama toko untuk konfirmasi:</label>
+      <code style="display:block;font-size:.85rem;color:var(--accent);margin-bottom:6px;padding:4px 8px;background:var(--bg3);border-radius:4px" id="hapus-toko-hint-nama"></code>
+      <input class="fi" id="hapus-toko-konfirm" placeholder="Ketik nama toko di sini..." oninput="checkHapusTokoInput()">
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('hapus-toko-modal')">Batal</button>
+      <button class="btn btn-red" id="hapus-toko-btn" disabled onclick="hapusToko()">🗑️ Ya, Hapus Sekarang</button>
+    </div>
   </div>
 </div>
 
@@ -3068,6 +3092,45 @@ function confirmGantiToko() {
   localStorage.removeItem('kk_toko_id');
   S.toko = null; S.currentUser = null; S.cart = [];
   showOnboarding();
+}
+
+function openHapusTokoModal() {
+  document.getElementById('hapus-toko-hint-nama').textContent = S.toko?.nama || '';
+  document.getElementById('hapus-toko-konfirm').value = '';
+  document.getElementById('hapus-toko-btn').disabled = true;
+  openModal('hapus-toko-modal');
+}
+
+function checkHapusTokoInput() {
+  const val = document.getElementById('hapus-toko-konfirm').value.trim();
+  const btn = document.getElementById('hapus-toko-btn');
+  btn.disabled = val !== S.toko?.nama;
+}
+
+async function hapusToko() {
+  const tid = S.toko?.id;
+  if (!tid) return;
+  loading(true, 'Menghapus semua data toko...');
+  try {
+    // Hapus urutan child → parent
+    await sb.from('stok_keluar').delete().eq('toko_id', tid);
+    await sb.from('kas_shift').delete().eq('toko_id', tid);
+    await sb.from('setoran_kas').delete().eq('toko_id', tid);
+    await sb.from('transaksi').delete().eq('toko_id', tid);
+    // Resep butuh menu_id dulu
+    const menuIds = S.menu.map(m => m.id);
+    if (menuIds.length) await sb.from('resep').delete().in('menu_id', menuIds);
+    await sb.from('menu').delete().eq('toko_id', tid);
+    await sb.from('bahan').delete().eq('toko_id', tid);
+    await sb.from('pengguna').delete().eq('toko_id', tid);
+    await sb.from('toko').delete().eq('id', tid);
+    // Bersihkan localStorage
+    Object.keys(localStorage).filter(k => k.includes(tid)).forEach(k => localStorage.removeItem(k));
+    localStorage.removeItem('kk_toko_id');
+    loading(false);
+    toast('Toko berhasil dihapus', 'info');
+    setTimeout(() => { S.toko = null; S.currentUser = null; S.cart = []; showOnboarding(); }, 1200);
+  } catch(e) { toast('Error: ' + e.message, 'error'); loading(false); }
 }
 </script>
 </body>
