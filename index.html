@@ -941,6 +941,29 @@ button{touch-action:manipulation}
   </div>
 </div>
 
+<!-- VOID TRANSAKSI MODAL -->
+<div class="overlay" id="void-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-hd">
+      <div class="modal-title" style="color:var(--red)">Batalkan Transaksi</div>
+      <button class="modal-x" onclick="closeModal('void-modal')">×</button>
+    </div>
+    <div style="padding:0 18px 6px">
+      <div id="void-info" style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:14px;font-size:.82rem"></div>
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">
+        Stok bahan yang dipakai akan <strong style="color:var(--green)">dikembalikan otomatis</strong>.
+      </div>
+      <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:9px 12px;font-size:.77rem;color:var(--red);margin-bottom:16px">
+        Transaksi akan dihapus permanen dari laporan dan tidak bisa dikembalikan.
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('void-modal')">Batal</button>
+      <button class="btn btn-red" id="void-confirm-btn" onclick="doVoidTransaksi()">Batalkan Transaksi</button>
+    </div>
+  </div>
+</div>
+
 <!-- HAPUS TOKO -->
 <div class="overlay" id="hapus-toko-modal">
   <div class="modal" style="max-width:400px;border:1.5px solid var(--red)">
@@ -3016,17 +3039,77 @@ function setQuickCash(n) {
 // ================================================================
 // VOID TRANSAKSI
 // ================================================================
-async function voidTransaksi(id) {
-  if (!confirm('Void transaksi ini?\n\nStok tidak otomatis dikembalikan — sesuaikan manual jika perlu.')) return;
-  loading(true,'Membatalkan transaksi...');
+let _voidTargetId = null;
+
+function voidTransaksi(id) {
+  const t = S.transaksi.find(x=>x.id===id);
+  if (!t) return;
+  _voidTargetId = id;
+
+  // Rangkum isi transaksi + efek stok
+  const items = (t.items||[]);
+  const stokLines = [];
+  for (const item of items) {
+    const ings = S.resep.filter(r=>r.menu_id===item.menuId);
+    for (const ing of ings) {
+      const b = S.bahan.find(x=>x.id===ing.bahan_id);
+      if (!b) continue;
+      const deduct = resepQtyToStok(b, ing.qty) * item.qty;
+      const unit   = resepUnit(b);
+      stokLines.push(`<span style="color:var(--green)">+${deduct%1?deduct.toFixed(1):deduct} ${unit}</span> ${b.nama}`);
+    }
+  }
+
+  document.getElementById('void-info').innerHTML = `
+    <div style="font-weight:700;margin-bottom:6px">${t.tanggal} ${t.waktu||''} · ${t.kasir_nama||'—'}</div>
+    <div style="margin-bottom:8px;color:var(--muted)">${items.map(i=>i.nama+(i.qty>1?' ×'+i.qty:'')).join(', ')}</div>
+    <div style="font-family:'Sora',sans-serif;font-size:1rem;font-weight:800;color:var(--amber)">${fmt(t.total)}</div>
+    ${stokLines.length?`<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:.75rem;line-height:1.8">
+      Stok kembali:<br>${stokLines.join('<br>')}
+    </div>`:'<div style="margin-top:8px;font-size:.74rem;color:var(--muted)">Tidak ada resep — stok tidak terpengaruh.</div>'}
+  `;
+  openModal('void-modal');
+}
+
+async function doVoidTransaksi() {
+  const id = _voidTargetId;
+  if (!id) return;
+  const t = S.transaksi.find(x=>x.id===id);
+  if (!t) return;
+
+  const btn = document.getElementById('void-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Membatalkan...';
+
   try {
+    // 1. Kembalikan stok
+    for (const item of (t.items||[])) {
+      const ings = S.resep.filter(r=>r.menu_id===item.menuId);
+      for (const ing of ings) {
+        const b = S.bahan.find(x=>x.id===ing.bahan_id);
+        if (!b) continue;
+        const restore = resepQtyToStok(b, ing.qty) * item.qty;
+        const newStok = b.stok + restore;
+        await sb.from('bahan').update({stok: newStok}).eq('id', b.id);
+        addStokLog(b.nama, +restore, `Void TRX: ${item.nama} ×${item.qty}`);
+        b.stok = newStok;
+      }
+    }
+
+    // 2. Hapus transaksi
     await sb.from('transaksi').delete().eq('id', id);
-    S.transaksi = S.transaksi.filter(t=>t.id!==id);
-    loading(false);
+    S.transaksi = S.transaksi.filter(x=>x.id!==id);
+
+    closeModal('void-modal');
+    _voidTargetId = null;
     renderLaporan();
     renderDashboard();
-    toast('Transaksi dibatalkan','info');
-  } catch(e) { toast('Error: '+e.message,'error'); loading(false); }
+    if (document.getElementById('page-stok')?.classList.contains('on')) renderStokPage();
+    toast('Transaksi dibatalkan & stok dikembalikan', 'info');
+  } catch(e) {
+    toast('Error: '+e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Batalkan Transaksi';
+  }
 }
 
 // ================================================================
