@@ -25,19 +25,30 @@ ALTER TABLE stok_keluar  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kas_shift    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE setoran_kas  ENABLE ROW LEVEL SECURITY;
 
--- 4. Drop policies lama kalau ada
-DROP POLICY IF EXISTS toko_sel    ON toko;
-DROP POLICY IF EXISTS toko_ins    ON toko;
-DROP POLICY IF EXISTS toko_upd    ON toko;
-DROP POLICY IF EXISTS toko_del    ON toko;
-DROP POLICY IF EXISTS pg_rls      ON pengguna;
-DROP POLICY IF EXISTS mn_rls      ON menu;
-DROP POLICY IF EXISTS bh_rls      ON bahan;
-DROP POLICY IF EXISTS rs_rls      ON resep;
-DROP POLICY IF EXISTS tx_rls      ON transaksi;
-DROP POLICY IF EXISTS sk_rls      ON stok_keluar;
-DROP POLICY IF EXISTS ks_rls      ON kas_shift;
-DROP POLICY IF EXISTS st_rls      ON setoran_kas;
+-- 4. Drop policies lama kalau ada (termasuk allow_all_* dari setup sebelumnya)
+DROP POLICY IF EXISTS toko_sel         ON toko;
+DROP POLICY IF EXISTS toko_ins         ON toko;
+DROP POLICY IF EXISTS toko_upd         ON toko;
+DROP POLICY IF EXISTS toko_del         ON toko;
+DROP POLICY IF EXISTS pg_rls           ON pengguna;
+DROP POLICY IF EXISTS mn_rls           ON menu;
+DROP POLICY IF EXISTS bh_rls           ON bahan;
+DROP POLICY IF EXISTS rs_rls           ON resep;
+DROP POLICY IF EXISTS tx_rls           ON transaksi;
+DROP POLICY IF EXISTS sk_rls           ON stok_keluar;
+DROP POLICY IF EXISTS ks_rls           ON kas_shift;
+DROP POLICY IF EXISTS st_rls           ON setoran_kas;
+
+-- Drop allow_all_* policies lama
+DROP POLICY IF EXISTS allow_all_toko        ON toko;
+DROP POLICY IF EXISTS allow_all_pengguna    ON pengguna;
+DROP POLICY IF EXISTS allow_all_menu        ON menu;
+DROP POLICY IF EXISTS allow_all_bahan       ON bahan;
+DROP POLICY IF EXISTS allow_all_resep       ON resep;
+DROP POLICY IF EXISTS allow_all_transaksi   ON transaksi;
+DROP POLICY IF EXISTS allow_all_stok_keluar ON stok_keluar;
+DROP POLICY IF EXISTS allow_all_kas_shift   ON kas_shift;
+DROP POLICY IF EXISTS allow_all_setoran_kas ON setoran_kas;
 
 -- 5. TOKO policies
 --    SELECT public → biar bisa cari toko by name di reconnect
@@ -155,7 +166,69 @@ $$;
 GRANT EXECUTE ON FUNCTION reconnect_toko(uuid, text) TO anon;
 GRANT EXECUTE ON FUNCTION my_toko_id() TO anon, authenticated;
 
+-- 9. Fungsi REGISTER_TOKO — bypass email confirmation
+--    Membuat auth user (langsung confirmed) + identity + toko + pengguna owner sekaligus
+CREATE OR REPLACE FUNCTION register_toko(
+  p_nama_toko    text,
+  p_nama_owner   text,
+  p_auth_email   text,
+  p_auth_password text
+) RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_user_id  uuid := gen_random_uuid();
+  v_toko_id  uuid;
+  v_enc_pw   text;
+BEGIN
+  -- Hash password pakai bcrypt (pgcrypto, sudah enable di Supabase)
+  v_enc_pw := crypt(p_auth_password, gen_salt('bf'));
+
+  -- Buat auth user langsung (email sudah confirmed, tidak perlu konfirmasi email)
+  INSERT INTO auth.users (
+    id, instance_id, aud, role,
+    email, encrypted_password,
+    email_confirmed_at, created_at, updated_at,
+    raw_app_meta_data, raw_user_meta_data,
+    is_super_admin, confirmation_token, recovery_token,
+    email_change_token_new, email_change
+  ) VALUES (
+    v_user_id,
+    '00000000-0000-0000-0000-000000000000',
+    'authenticated', 'authenticated',
+    p_auth_email, v_enc_pw,
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}', '{}',
+    false, '', '', '', ''
+  );
+
+  -- Buat auth identity (wajib agar signInWithPassword bisa bekerja)
+  INSERT INTO auth.identities (
+    id, provider_id, user_id, identity_data, provider,
+    last_sign_in_at, created_at, updated_at
+  ) VALUES (
+    gen_random_uuid(), p_auth_email, v_user_id,
+    json_build_object('sub', v_user_id::text, 'email', p_auth_email),
+    'email',
+    now(), now(), now()
+  );
+
+  -- Buat toko
+  INSERT INTO toko (nama, auth_id, auth_email, auth_password)
+  VALUES (p_nama_toko, v_user_id, p_auth_email, p_auth_password)
+  RETURNING id INTO v_toko_id;
+
+  -- Buat pengguna owner (PIN diset nanti lewat layar aktivasi)
+  INSERT INTO pengguna (nama, role, pin, toko_id)
+  VALUES (p_nama_owner, 'owner', 'PENDING', v_toko_id);
+
+  RETURN json_build_object(
+    'toko_id',  v_toko_id,
+    'user_id',  v_user_id
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION register_toko(text,text,text,text) TO anon;
+
 -- ============================================================
--- SELESAI. Sekarang ke Supabase:
--- Authentication → Settings → Email Confirmation → OFF
+-- SELESAI.
 -- ============================================================

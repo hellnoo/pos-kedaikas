@@ -1428,13 +1428,18 @@ async function doReconnectPin() {
   btn.disabled = true; btn.textContent = 'Memverifikasi...';
   try {
     const pinHash256 = await hashPass(pin);
-    // Coba SHA-256 dulu, fallback ke legacy base64
+    // Coba SHA-256, base64 legacy, lalu plaintext (untuk toko lama)
     let authCreds = null;
-    for (const h of [pinHash256, hashPassLegacy(pin)]) {
+    let lastErr = null;
+    for (const h of [pinHash256, hashPassLegacy(pin), pin]) {
       const {data, error} = await sb.rpc('reconnect_toko', {p_toko_id: _rcTokoId, p_pin_hash: h});
       if (!error && data?.auth_email) { authCreds = data; break; }
+      if (error) lastErr = error;
     }
-    if (!authCreds) throw new Error('PIN salah atau bukan owner');
+    if (!authCreds) {
+      const msg = lastErr?.message || 'PIN salah atau bukan owner';
+      throw new Error(msg);
+    }
 
     // Sign in ke Supabase Auth
     const {error: authErr} = await sb.auth.signInWithPassword({
@@ -1489,30 +1494,40 @@ async function doOnboarding() {
   btn.disabled = true; btn.textContent = 'Menyiapkan...';
   loading(true,'Menyiapkan kedai kamu...');
   try {
-    // 1. Buat Supabase Auth user (auto-generated credentials, tidak user-facing)
+    // 1. Generate auto credentials (tidak user-facing)
     const authEmail = `toko_${Date.now()}_${Math.random().toString(36).slice(2,6)}@kedaikas.app`;
     const authPassword = (typeof crypto.randomUUID==='function')
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);
-    const {data:authData, error:authErr} = await sb.auth.signUp({email:authEmail, password:authPassword});
-    if (authErr) throw authErr;
 
-    // 2. Simpan credentials di localStorage sebelum insert toko
+    // 2. Register via SECURITY DEFINER — buat auth user yg langsung confirmed + toko + pengguna
+    const {data:regData, error:regErr} = await sb.rpc('register_toko', {
+      p_nama_toko: nama,
+      p_nama_owner: owner,
+      p_auth_email: authEmail,
+      p_auth_password: authPassword
+    });
+    if (regErr) throw regErr;
+    const tokoId = regData.toko_id;
+
+    // 3. Sign in (langsung berhasil karena email sudah confirmed oleh register_toko)
+    const {error:signErr} = await sb.auth.signInWithPassword({email:authEmail, password:authPassword});
+    if (signErr) throw signErr;
+
+    // 4. Simpan ke localStorage
+    localStorage.setItem('kk_toko_id', tokoId);
     localStorage.setItem('kk_auth_e', authEmail);
     localStorage.setItem('kk_auth_p', authPassword);
 
-    // 3. Buat toko dengan auth linkage
-    const {data:toko,error} = await sb.from('toko').insert({
-      nama, email:authEmail,
-      password_hash: await hashPass(nama+Date.now()),
+    // 5. Update info toko tambahan (RLS aktif dgn session)
+    await sb.from('toko').update({
       alamat, telepon:telp, logo_emoji:'☕',
-      auth_id: authData?.user?.id,
-      auth_email: authEmail,
-      auth_password: authPassword
-    }).select().single();
-    if (error) throw error;
+      email: authEmail,
+      password_hash: await hashPass(nama+Date.now())
+    }).eq('id', tokoId);
 
-    await sb.from('pengguna').insert({toko_id:toko.id, nama:owner, role:'owner', pin:'PENDING'});
+    // placeholder agar blok berikut tetap bekerja
+    const toko = {id: tokoId};
 
     const defaultMenu = [
       {toko_id:toko.id,nama:'Espresso',icon:'☕',kategori:'Kopi',harga:15000,hpp:7000,status:'aktif'},
@@ -1522,11 +1537,12 @@ async function doOnboarding() {
     ];
     await sb.from('menu').insert(defaultMenu);
 
-    localStorage.setItem('kk_toko_id', toko.id);
-    S.toko = toko;
+    // Fetch toko lengkap setelah semua data selesai diinput
+    const {data:tokoFull} = await sb.from('toko').select('*').eq('id',tokoId).single();
+    S.toko = tokoFull || {id:tokoId, nama};
     await loadTokoData();
     loading(false);
-    showActivationScreen(toko.nama, toko.id);
+    showActivationScreen(S.toko.nama, tokoId);
   } catch(e) {
     toast('Error: '+e.message,'error');
     loading(false);
