@@ -547,6 +547,16 @@ button{touch-action:manipulation}
             </div>
           </div>
           <div id="rc-results" style="margin-bottom:8px"></div>
+          <!-- PIN step — muncul setelah toko dipilih -->
+          <div id="rc-pin-wrap" style="display:none;padding:14px;background:var(--bg3);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;margin-bottom:10px">
+            <div id="rc-selected-label" style="font-size:.8rem;font-weight:700;margin-bottom:8px;color:var(--text)"></div>
+            <div style="font-size:.74rem;color:var(--muted);margin-bottom:8px">Masukkan PIN owner untuk lanjut:</div>
+            <input class="fi" type="password" id="rc-pin" placeholder="PIN 4 digit" maxlength="4" inputmode="numeric"
+              style="margin-bottom:8px"
+              onkeydown="if(event.key==='Enter')doReconnectPin()"
+              oninput="if(this.value.replace(/\D/g,'').length===4)doReconnectPin()">
+            <button class="btn btn-amber" style="width:100%" onclick="doReconnectPin()" id="rc-pin-btn">Hubungkan Toko</button>
+          </div>
           <div style="margin-top:12px;text-align:center">
             <span style="font-size:.75rem;color:var(--muted)">Belum punya toko? </span>
             <button onclick="obTab('daftar')" style="background:none;border:none;color:var(--amber);font-size:.75rem;cursor:pointer;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif">Daftar gratis →</button>
@@ -1382,8 +1392,9 @@ async function doReconnect() {
       document.getElementById('rc-results').innerHTML = '<p style="font-size:.78rem;color:var(--muted);text-align:center;padding:8px 0">Toko tidak ditemukan. Cek ejaan nama toko kamu.</p>';
       return;
     }
+    document.getElementById('rc-pin-wrap').style.display = 'none';
     document.getElementById('rc-results').innerHTML = data.map(t=>`
-      <button onclick="reconnectToko('${t.id}')" style="width:100%;padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.83rem;cursor:pointer;text-align:left;margin-bottom:6px;transition:all .15s;display:flex;align-items:center;gap:10px" onmouseover="this.style.borderColor='var(--amber)'" onmouseout="this.style.borderColor='var(--border)'">
+      <button data-id="${t.id}" onclick="reconnectToko('${t.id}','${t.nama.replace(/'/g,'\\\'')}')" style="width:100%;padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.83rem;cursor:pointer;text-align:left;margin-bottom:6px;transition:all .15s;display:flex;align-items:center;gap:10px" onmouseover="this.style.borderColor='var(--amber)'" onmouseout="this.style.borderColor=_rcTokoId==='${t.id}'?'var(--amber)':'var(--border)'">
         <span style="font-size:1.4rem">${t.logo_emoji||'☕'}</span>
         <div><div style="font-weight:700">${t.nama}</div>${t.alamat?`<div style="font-size:.72rem;color:var(--muted)">${t.alamat}</div>`:''}</div>
       </button>`).join('');
@@ -1393,7 +1404,67 @@ async function doReconnect() {
   }
 }
 
-async function reconnectToko(id) {
+let _rcTokoId = null;
+
+function reconnectToko(id, namaLabel) {
+  _rcTokoId = id;
+  // Highlight pilihan
+  document.querySelectorAll('#rc-results button').forEach(b => b.style.borderColor = 'var(--border)');
+  const picked = document.querySelector(`#rc-results button[data-id="${id}"]`);
+  if (picked) picked.style.borderColor = 'var(--amber)';
+  // Tampilkan PIN step
+  const wrap = document.getElementById('rc-pin-wrap');
+  document.getElementById('rc-selected-label').textContent = '🏪 ' + (namaLabel||'Toko terpilih');
+  document.getElementById('rc-pin').value = '';
+  wrap.style.display = 'block';
+  setTimeout(() => document.getElementById('rc-pin').focus(), 100);
+}
+
+async function doReconnectPin() {
+  if (!_rcTokoId) return;
+  const pin = document.getElementById('rc-pin').value.replace(/\D/g,'');
+  if (pin.length < 4) { toast('PIN harus 4 digit','error'); return; }
+  const btn = document.getElementById('rc-pin-btn');
+  btn.disabled = true; btn.textContent = 'Memverifikasi...';
+  try {
+    const pinHash256 = await hashPass(pin);
+    // Coba SHA-256 dulu, fallback ke legacy base64
+    let authCreds = null;
+    for (const h of [pinHash256, hashPassLegacy(pin)]) {
+      const {data, error} = await sb.rpc('reconnect_toko', {p_toko_id: _rcTokoId, p_pin_hash: h});
+      if (!error && data?.auth_email) { authCreds = data; break; }
+    }
+    if (!authCreds) throw new Error('PIN salah atau bukan owner');
+
+    // Sign in ke Supabase Auth
+    const {error: authErr} = await sb.auth.signInWithPassword({
+      email: authCreds.auth_email,
+      password: authCreds.auth_password
+    });
+    if (authErr) throw authErr;
+
+    // Simpan credentials di localStorage
+    localStorage.setItem('kk_auth_e', authCreds.auth_email);
+    localStorage.setItem('kk_auth_p', authCreds.auth_password);
+    localStorage.setItem('kk_toko_id', _rcTokoId);
+
+    loading(true, 'Memuat data toko...');
+    const {data: toko} = await sb.from('toko').select('*').eq('id', _rcTokoId).single();
+    S.toko = toko;
+    await loadTokoData();
+    loading(false);
+    toast('Toko berhasil dihubungkan!','success');
+    showPinScreen();
+  } catch(e) {
+    toast(e.message||'Gagal menghubungkan','error');
+    document.getElementById('rc-pin').value = '';
+    document.getElementById('rc-pin').focus();
+  } finally {
+    btn.disabled = false; btn.textContent = 'Hubungkan Toko';
+  }
+}
+
+async function reconnectToko_legacy(id) {
   loading(true,'Menghubungkan toko...');
   try {
     const {data,error} = await sb.from('toko').select('*').eq('id',id).single();
@@ -1418,11 +1489,26 @@ async function doOnboarding() {
   btn.disabled = true; btn.textContent = 'Menyiapkan...';
   loading(true,'Menyiapkan kedai kamu...');
   try {
-    // Generate unique email agar tidak tabrakan di kolom unique
-    const fakeEmail = `toko_${Date.now()}_${Math.random().toString(36).slice(2,7)}@kedaikas.local`;
+    // 1. Buat Supabase Auth user (auto-generated credentials, tidak user-facing)
+    const authEmail = `toko_${Date.now()}_${Math.random().toString(36).slice(2,6)}@kedaikas.app`;
+    const authPassword = (typeof crypto.randomUUID==='function')
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);
+    const {data:authData, error:authErr} = await sb.auth.signUp({email:authEmail, password:authPassword});
+    if (authErr) throw authErr;
+
+    // 2. Simpan credentials di localStorage sebelum insert toko
+    localStorage.setItem('kk_auth_e', authEmail);
+    localStorage.setItem('kk_auth_p', authPassword);
+
+    // 3. Buat toko dengan auth linkage
     const {data:toko,error} = await sb.from('toko').insert({
-      nama, email:fakeEmail, password_hash:hashPass(nama+Date.now()),
-      alamat, telepon:telp, logo_emoji:'☕'
+      nama, email:authEmail,
+      password_hash: await hashPass(nama+Date.now()),
+      alamat, telepon:telp, logo_emoji:'☕',
+      auth_id: authData?.user?.id,
+      auth_email: authEmail,
+      auth_password: authPassword
     }).select().single();
     if (error) throw error;
 
@@ -1677,6 +1763,7 @@ function updateClock() {
 async function logout() {
   S.currentUser=null; S.cart=[];
   pinInput=''; selectedPinUser=null;
+  // Re-auth ke Supabase (kasir logout → tetap stay di toko, tidak sign-out auth)
   if (S.toko) {
     showPinScreen();
   } else {
@@ -3306,10 +3393,21 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('ope
 window.addEventListener('load', ()=>{ initTheme(); tryLoadApp(); });
 
 async function tryLoadApp(isRetry=false) {
-  const tid = localStorage.getItem('kk_toko_id');
+  const tid   = localStorage.getItem('kk_toko_id');
+  const authE = localStorage.getItem('kk_auth_e');
+  const authP = localStorage.getItem('kk_auth_p');
   if (tid) {
     loading(true, isRetry ? 'Mencoba ulang...' : 'Memuat data...');
     try {
+      // Sign in ke Supabase Auth dulu kalau ada credentials tersimpan
+      if (authE && authP) {
+        const {error:sErr} = await sb.auth.signInWithPassword({email:authE, password:authP});
+        if (sErr) {
+          // Credentials expired / invalid — clear dan lanjut tanpa auth (toko lama)
+          localStorage.removeItem('kk_auth_e');
+          localStorage.removeItem('kk_auth_p');
+        }
+      }
       const {data,error} = await Promise.race([
         sb.from('toko').select('*').eq('id',tid).single(),
         new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
@@ -3345,7 +3443,8 @@ function retryLoad() {
 
 function confirmGantiToko() {
   if (!confirm('Yakin mau ganti toko? Perangkat ini akan kembali ke halaman setup.\n\nData toko lama tidak akan hilang.')) return;
-  localStorage.removeItem('kk_toko_id');
+  sb.auth.signOut();
+  ['kk_toko_id','kk_auth_e','kk_auth_p'].forEach(k=>localStorage.removeItem(k));
   S.toko = null; S.currentUser = null; S.cart = [];
   showOnboarding();
 }
@@ -3380,9 +3479,10 @@ async function hapusToko() {
     await sb.from('bahan').delete().eq('toko_id', tid);
     await sb.from('pengguna').delete().eq('toko_id', tid);
     await sb.from('toko').delete().eq('id', tid);
-    // Bersihkan localStorage
+    // Bersihkan localStorage + sign out
     Object.keys(localStorage).filter(k => k.includes(tid)).forEach(k => localStorage.removeItem(k));
-    localStorage.removeItem('kk_toko_id');
+    ['kk_toko_id','kk_auth_e','kk_auth_p'].forEach(k=>localStorage.removeItem(k));
+    await sb.auth.signOut();
     loading(false);
     toast('Toko berhasil dihapus', 'info');
     setTimeout(() => { S.toko = null; S.currentUser = null; S.cart = []; showOnboarding(); }, 1200);
