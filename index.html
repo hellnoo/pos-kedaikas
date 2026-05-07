@@ -1030,7 +1030,12 @@ function showScreen(id) {
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  el.classList.add('open');
+  // Klik backdrop untuk tutup
+  el.onclick = e => { if(e.target === el) closeModal(id); };
+}
 
 // Simple password hash (base64 — for demo; use bcrypt in production)
 function hashPass(p) { return btoa(unescape(encodeURIComponent(p))); }
@@ -1302,9 +1307,9 @@ let pinInput='', selectedPinUser=null;
 let pinAttempts=0, pinLockedUntil=0;
 
 function renderPinUsers() {
-  document.getElementById('pin-user-list').innerHTML = S.pengguna.map(u=>`
+  document.getElementById('pin-user-list').innerHTML = S.pengguna.filter(u=>u&&u.id).map(u=>`
     <button class="user-btn ${selectedPinUser?.id===u.id?'sel':''}" onclick="selectPinUser('${u.id}')">
-      ${u.nama}
+      ${esc(u.nama)}
       <span class="u-role">${u.role==='owner'?'👑 Owner':'🧾 Kasir'}</span>
     </button>`).join('');
 }
@@ -2440,26 +2445,6 @@ async function saveSettingsQRIS() {
     toast(qris ? '✅ QRIS disimpan (lokal)' : 'QRIS dihapus', 'success');
   }
   if (qris) previewQRIS();
-}
-
-async function changePassword() {
-  const oldp=document.getElementById('set-old-pass').value;
-  const newp=document.getElementById('set-new-pass').value;
-  const conf=document.getElementById('set-conf-pass').value;
-  if(!oldp||!newp){toast('Isi semua field password!','error');return;}
-  if(newp.length<6){toast('Password baru minimal 6 karakter!','error');return;}
-  if(newp!==conf){toast('Konfirmasi password tidak cocok!','error');return;}
-  if(!checkPass(oldp,S.toko.password_hash)){toast('Password lama salah!','error');return;}
-  loading(true,'Menyimpan...');
-  try {
-    const h=hashPass(newp);
-    await sb.from('toko').update({password_hash:h}).eq('id',S.toko.id);
-    S.toko.password_hash=h;
-    document.getElementById('set-old-pass').value='';
-    document.getElementById('set-new-pass').value='';
-    document.getElementById('set-conf-pass').value='';
-    loading(false);toast('Password berhasil diubah!','success');
-  } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
 
 // ================================================================
