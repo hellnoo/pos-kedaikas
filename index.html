@@ -943,7 +943,7 @@ select.fi{appearance:none;cursor:pointer}
     <div class="modal-hd"><div class="modal-title" id="um-title">Tambah Kasir</div><button class="modal-x" onclick="closeModal('user-modal')">×</button></div>
     <div class="fg"><label class="fl">Nama</label><input class="fi" id="um-name" placeholder="Nama Kasir"></div>
     <div class="fg"><label class="fl">Role</label><select class="fi" id="um-role"><option value="kasir">Kasir</option><option value="owner">Owner</option></select></div>
-    <div class="fg"><label class="fl">PIN (4 digit)</label><input class="fi" type="password" id="um-pin" placeholder="••••" maxlength="4"></div>
+    <div class="fg"><label class="fl" id="um-pin-lbl">PIN (4 digit)</label><input class="fi" type="password" id="um-pin" placeholder="••••" maxlength="4" inputmode="numeric" pattern="\d{4}"></div>
     <input type="hidden" id="um-eid">
     <div class="modal-ft"><button class="btn btn-ghost" onclick="closeModal('user-modal')">Batal</button><button class="btn btn-amber" onclick="saveUser()">Simpan</button></div>
   </div>
@@ -2277,7 +2277,9 @@ function openUserModal(id) {
   document.getElementById('um-title').textContent=u?'Edit Pengguna':'Tambah Kasir';
   document.getElementById('um-name').value=u?.nama||'';
   document.getElementById('um-role').value=u?.role||'kasir';
-  document.getElementById('um-pin').value=u?.pin||'';
+  document.getElementById('um-pin').value=''; // jangan isi hash ke field PIN
+  const pinLbl=document.getElementById('um-pin-lbl');
+  if(pinLbl) pinLbl.textContent=u?'PIN baru (kosongkan jika tidak ganti)':'PIN (4 digit)';
   document.getElementById('um-eid').value=id||'';
   openModal('user-modal');
 }
@@ -2285,13 +2287,26 @@ function openUserModal(id) {
 async function saveUser() {
   const nama=document.getElementById('um-name').value.trim();
   const pin=document.getElementById('um-pin').value.trim();
-  if(!nama||pin.length!==4){toast('Nama wajib & PIN 4 digit!','error');return;}
-  const data={nama,role:document.getElementById('um-role').value,pin:hashPass(pin)};
   const eid=document.getElementById('um-eid').value;
+  const isEdit=!!eid;
+  if(!nama){toast('Nama wajib diisi!','error');return;}
+  if(!isEdit && pin.length!==4){toast('PIN 4 digit wajib untuk kasir baru!','error');return;}
+  if(pin && pin.length!==4){toast('PIN harus tepat 4 digit!','error');return;}
+  const data={nama,role:document.getElementById('um-role').value};
+  if(pin) data.pin=hashPass(pin); // hanya update PIN kalau diisi
   loading(true,'Menyimpan...');
   try {
-    if(eid){await sb.from('pengguna').update(data).eq('id',eid);const i=S.pengguna.findIndex(x=>x.id===eid);S.pengguna[i]={...S.pengguna[i],...data};}
-    else{const {data:d}=await sb.from('pengguna').insert({...data,toko_id:S.toko.id}).select().single();S.pengguna.push(d);}
+    if(isEdit){
+      const {error:e}=await sb.from('pengguna').update(data).eq('id',eid);
+      if(e) throw new Error(e.message);
+      const i=S.pengguna.findIndex(x=>x.id===eid);
+      S.pengguna[i]={...S.pengguna[i],...data};
+    } else {
+      const {data:d,error:e}=await sb.from('pengguna').insert({...data,toko_id:S.toko.id}).select().single();
+      if(e) throw new Error(e.message);
+      if(!d) throw new Error('Insert gagal, coba lagi.');
+      S.pengguna.push(d);
+    }
     loading(false);closeModal('user-modal');renderUserPage();toast('Pengguna disimpan!','success');
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
