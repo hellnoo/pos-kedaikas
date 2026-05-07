@@ -526,19 +526,21 @@ select.fi{appearance:none;cursor:pointer}
   <div class="pin-box">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
       <span style="font-size:1.8rem" id="pin-store-ico">☕</span>
-      <div><div class="pin-store-name" id="pin-store-name">—</div><div class="pin-store-sub">Pilih pengguna dan masukkan PIN</div></div>
+      <div><div class="pin-store-name" id="pin-store-name">—</div><div class="pin-store-sub" id="pin-store-sub">👆 Tap nama kamu di bawah</div></div>
     </div>
     <div id="pin-user-list"></div>
-    <div class="pin-lbl">Masukkan PIN</div>
-    <div class="pin-dots">
-      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
-      <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
-    </div>
-    <div class="pin-pad">
-      <button class="pin-key" onclick="pk('1')">1</button><button class="pin-key" onclick="pk('2')">2</button><button class="pin-key" onclick="pk('3')">3</button>
-      <button class="pin-key" onclick="pk('4')">4</button><button class="pin-key" onclick="pk('5')">5</button><button class="pin-key" onclick="pk('6')">6</button>
-      <button class="pin-key" onclick="pk('7')">7</button><button class="pin-key" onclick="pk('8')">8</button><button class="pin-key" onclick="pk('9')">9</button>
-      <button class="pin-key" onclick="pk('C')">C</button><button class="pin-key" onclick="pk('0')">0</button><button class="pin-key" onclick="pk('⌫')" style="font-size:.8rem">⌫</button>
+    <div id="pin-pad-wrap" style="opacity:.35;pointer-events:none;transition:opacity .2s">
+      <div class="pin-lbl" id="pin-lbl-txt">Pilih nama dulu ↑</div>
+      <div class="pin-dots">
+        <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+      </div>
+      <div class="pin-pad">
+        <button class="pin-key" onclick="pk('1')">1</button><button class="pin-key" onclick="pk('2')">2</button><button class="pin-key" onclick="pk('3')">3</button>
+        <button class="pin-key" onclick="pk('4')">4</button><button class="pin-key" onclick="pk('5')">5</button><button class="pin-key" onclick="pk('6')">6</button>
+        <button class="pin-key" onclick="pk('7')">7</button><button class="pin-key" onclick="pk('8')">8</button><button class="pin-key" onclick="pk('9')">9</button>
+        <button class="pin-key" onclick="pk('C')">C</button><button class="pin-key" onclick="pk('0')">0</button><button class="pin-key" onclick="pk('⌫')" style="font-size:.8rem">⌫</button>
+      </div>
     </div>
     <div class="pin-err" id="pin-err"></div>
     <button class="pin-back" onclick="confirmGantiToko()">← Ganti toko</button>
@@ -845,6 +847,12 @@ select.fi{appearance:none;cursor:pointer}
           </div>
           <button class="btn btn-amber" onclick="saveSettingsTaxSvc()">💾 Simpan</button>
           <p style="font-size:.7rem;color:var(--muted);margin-top:8px">💡 Contoh: Service 5% + PPN 11% = tagihan pelanggan lebih tinggi dari harga menu. Sudah masuk di struk otomatis.</p>
+        </div>
+        <div class="set-section">
+          <div class="set-section-title">🔔 Notifikasi</div>
+          <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Aktifkan notifikasi agar dapat ping saat ada pembayaran masuk dari kasir lain.</p>
+          <div id="notif-status-wrap" style="margin-bottom:10px;font-size:.8rem;color:var(--muted)">—</div>
+          <button class="btn btn-ghost" onclick="enableNotifManual()">🔔 Aktifkan Notifikasi</button>
         </div>
         <div class="set-section" style="border-color:rgba(239,68,68,.25)">
           <div class="set-section-title" style="color:var(--red)">⚠️ Ganti Toko</div>
@@ -1268,6 +1276,14 @@ async function loadTokoData() {
 function showPinScreen() {
   document.getElementById('pin-store-name').textContent = S.toko.nama;
   document.getElementById('pin-store-ico').textContent = S.toko.logo_emoji||'☕';
+  selectedPinUser = null; pinInput = '';
+  // Reset PIN pad ke state disabled
+  const wrap = document.getElementById('pin-pad-wrap');
+  if (wrap) { wrap.style.opacity='0.35'; wrap.style.pointerEvents='none'; }
+  const lbl = document.getElementById('pin-lbl-txt');
+  if (lbl) lbl.textContent = 'Pilih nama dulu ↑';
+  const sub = document.getElementById('pin-store-sub');
+  if (sub) sub.textContent = '👆 Tap nama kamu di bawah';
   renderPinUsers();
   showScreen('pin');
 }
@@ -1288,6 +1304,13 @@ function selectPinUser(id) {
   pinInput=''; updatePinDots();
   document.getElementById('pin-err').textContent='';
   renderPinUsers();
+  // Aktifkan PIN pad
+  const wrap = document.getElementById('pin-pad-wrap');
+  if (wrap) { wrap.style.opacity='1'; wrap.style.pointerEvents='auto'; }
+  const lbl = document.getElementById('pin-lbl-txt');
+  if (lbl) lbl.textContent = 'Masukkan PIN';
+  const sub = document.getElementById('pin-store-sub');
+  if (sub) sub.textContent = 'Halo, ' + (selectedPinUser?.nama||'') + '!';
 }
 
 function pk(k) {
@@ -1369,7 +1392,6 @@ function initApp() {
   updateClock();
   updateShiftBtn();
   updatePremiumUI();
-  requestNotifPermission();
   initRealtimeNotif();
   initPremiumQRISRealtime();
 }
@@ -1649,9 +1671,32 @@ function testQRISNotif() {
 
 // Request browser notification permission
 function requestNotifPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
+  // Tidak auto-request saat login — hanya lewat tombol manual di Settings
+}
+
+async function enableNotifManual() {
+  if (!('Notification' in window)) {
+    toast('Browser ini tidak support notifikasi','error'); return;
   }
+  const perm = await Notification.requestPermission();
+  updateNotifStatusUI();
+  if (perm === 'granted') toast('✅ Notifikasi aktif!','success');
+  else if (perm === 'denied') toast('Notifikasi diblokir. Aktifkan manual di pengaturan browser.','error');
+}
+
+function updateNotifStatusUI() {
+  const el = document.getElementById('notif-status-wrap');
+  if (!el) return;
+  if (!('Notification' in window)) {
+    el.innerHTML = '❌ Browser tidak support notifikasi'; return;
+  }
+  const p = Notification.permission;
+  const map = {
+    granted: '<span style="color:var(--green)">✅ Notifikasi aktif</span>',
+    denied:  '<span style="color:var(--red)">🚫 Diblokir — aktifkan di pengaturan browser</span>',
+    default: '<span style="color:var(--amber)">⚠️ Belum diaktifkan</span>',
+  };
+  el.innerHTML = map[p] || '—';
 }
 
 // ================================================================
@@ -2271,6 +2316,7 @@ function loadSettingsPage() {
   if (qrisVal) setTimeout(previewQRIS, 100);
   loadTaxSvcSettings();
   loadPremiumSettingsPage();
+  updateNotifStatusUI();
 }
 
 function previewQRIS() {
