@@ -466,9 +466,13 @@ select.fi{appearance:none;cursor:pointer}
         </div>
         <div class="ob-enter-d2">
           <div class="fg"><label class="fl">Nama Kedai / Toko</label><input class="fi" id="ob-nama" placeholder="Kedai Kopi Nusantara" autofocus style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
-          <div class="fg"><label class="fl">Nama Kamu (Pemilik)</label><input class="fi" id="ob-owner" placeholder="Budi" onkeydown="if(event.key==='Enter')doOnboarding()" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <div class="fg"><label class="fl">Nama Kamu (Pemilik)</label><input class="fi" id="ob-owner" placeholder="Budi" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
           <div class="fg"><label class="fl">Alamat <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-alamat" placeholder="Jl. Merdeka No. 1" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
-          <div class="fg" style="margin-bottom:18px"><label class="fl">Telepon <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-telp" type="tel" placeholder="0812xxxxxxxx" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <div class="fg"><label class="fl">Telepon <span style="color:var(--muted);font-weight:400;text-transform:none">(opsional)</span></label><input class="fi" id="ob-telp" type="tel" placeholder="0812xxxxxxxx" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+            <div class="fg" style="margin-bottom:0"><label class="fl">PIN Kamu (4 digit)</label><input class="fi" type="password" id="ob-pin" placeholder="••••" maxlength="4" inputmode="numeric" pattern="\d{4}" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+            <div class="fg" style="margin-bottom:0"><label class="fl">Konfirmasi PIN</label><input class="fi" type="password" id="ob-pin2" placeholder="••••" maxlength="4" inputmode="numeric" pattern="\d{4}" onkeydown="if(event.key==='Enter')doOnboarding()" style="background:rgba(255,255,255,.04);border-color:rgba(245,158,11,.2)"></div>
+          </div>
         </div>
         <div class="ob-enter-d3">
           <button class="btn btn-amber ob-btn-glow" style="width:100%;padding:14px;font-size:.95rem;border-radius:10px;font-family:'Sora',sans-serif;font-weight:700;letter-spacing:.3px" onclick="doOnboarding()" id="ob-btn">🚀 Mulai Sekarang</button>
@@ -1210,13 +1214,16 @@ async function doOnboarding() {
   const owner = document.getElementById('ob-owner').value.trim();
   const alamat = document.getElementById('ob-alamat').value.trim();
   const telp = document.getElementById('ob-telp').value.trim();
+  const pin = document.getElementById('ob-pin').value.trim();
+  const pin2 = document.getElementById('ob-pin2').value.trim();
   if (!nama) { toast('Nama toko wajib diisi!','error'); return; }
   if (!owner) { toast('Nama kamu wajib diisi!','error'); return; }
+  if (pin.length !== 4) { toast('PIN harus 4 digit!','error'); return; }
+  if (pin !== pin2) { toast('Konfirmasi PIN tidak cocok!','error'); return; }
   const btn = document.getElementById('ob-btn');
   btn.disabled = true; btn.textContent = 'Menyiapkan...';
   loading(true,'Menyiapkan kedai kamu...');
   try {
-    // Generate unique email agar tidak tabrakan di kolom unique
     const fakeEmail = `toko_${Date.now()}_${Math.random().toString(36).slice(2,7)}@kedaikas.local`;
     const {data:toko,error} = await sb.from('toko').insert({
       nama, email:fakeEmail, password_hash:hashPass(nama+Date.now()),
@@ -1224,7 +1231,10 @@ async function doOnboarding() {
     }).select().single();
     if (error) throw error;
 
-    await sb.from('pengguna').insert({toko_id:toko.id, nama:owner, role:'owner', pin:'PENDING'});
+    const {error:pgErr} = await sb.from('pengguna').insert({
+      toko_id:toko.id, nama:owner, role:'owner', pin:hashPass(pin)
+    });
+    if (pgErr) throw pgErr;
 
     const defaultMenu = [
       {toko_id:toko.id,nama:'Espresso',icon:'☕',kategori:'Kopi',harga:15000,hpp:7000,status:'aktif'},
@@ -1238,11 +1248,11 @@ async function doOnboarding() {
     S.toko = toko;
     await loadTokoData();
     loading(false);
-    showActivationScreen(toko.nama, toko.id);
+    toast('🎉 Toko berhasil dibuat! Silakan masuk.','success');
+    showPinScreen();
   } catch(e) {
     toast('Error: '+e.message,'error');
     loading(false);
-    const btn=document.getElementById('ob-btn');
     if(btn){btn.disabled=false;btn.textContent='🚀 Mulai Sekarang';}
   }
 }
@@ -1335,7 +1345,7 @@ function checkPin() {
     pinInput=''; updatePinDots(); return;
   }
   if (selectedPinUser.pin === 'PENDING') {
-    errEl.textContent='⏳ PIN belum aktif. Hubungi admin via WA!';
+    errEl.textContent='⚠️ PIN belum diatur. Minta pemilik toko untuk set PIN kamu di menu Pengguna.';
     pinInput=''; updatePinDots(); return;
   }
   const plain = selectedPinUser.pin === pinInput;
