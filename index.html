@@ -1399,13 +1399,14 @@ function initApp() {
   renderPOS();
   if(u.role==='owner') renderDashboard();
   updateNavBadges();
-  updateClock();
+  if(!_clockStarted){_clockStarted=true;updateClock();}
   updateShiftBtn();
   updatePremiumUI();
   initRealtimeNotif();
   initPremiumQRISRealtime();
 }
 
+let _clockStarted = false;
 function updateClock() {
   const n=new Date();
   document.getElementById('clock').textContent=n.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -1469,8 +1470,8 @@ function renderPOS() {
   document.getElementById('pos-grid').innerHTML=items.map(m=>{
     const ok=canMake(m.id);
     return `<div class="m-tile ${ok?'':'oos'}" onclick="addToCart('${m.id}')">
-      <div class="mt-ico">${m.icon||'🍽️'}</div>
-      <div class="mt-name">${m.nama}</div>
+      <div class="mt-ico">${esc(m.icon||'🍽️')}</div>
+      <div class="mt-name">${esc(m.nama)}</div>
       <div class="mt-price">${fmt(m.harga)}</div>
       <div class="mt-stk">${ok?'Tersedia':'Stok habis'}</div>
     </div>`;
@@ -1502,6 +1503,8 @@ function clearCart(){
   document.getElementById('dk-val').value='';
   const noteEl=document.getElementById('tx-note');
   if(noteEl) noteEl.value='';
+  // Reset ke cash agar QRIS panel tidak menggantung
+  if(S.payMethod==='qris') setPayMethod('cash');
   renderCart();
 }
 
@@ -1509,7 +1512,7 @@ function renderCart() {
   const body=document.getElementById('cart-body');
   if(!S.cart.length) { body.innerHTML='<div class="empty"><div class="empty-ico">🛒</div><p style="font-size:.78rem">Belum ada item</p></div>'; }
   else { body.innerHTML=S.cart.map(i=>`<div class="ci">
-    <div style="flex:1"><div class="ci-name">${i.nama}</div><div class="ci-p">${fmt(i.harga)} × ${i.qty}</div></div>
+    <div style="flex:1"><div class="ci-name">${esc(i.nama)}</div><div class="ci-p">${fmt(i.harga)} × ${i.qty}</div></div>
     <div class="ci-qty">
       <button class="ci-qb" onclick="removeFromCart('${i.menuId}')">−</button>
       <span class="ci-qn">${i.qty}</span>
@@ -2093,7 +2096,7 @@ function renderLaporan() {
 function renderMenuPage() {
   document.getElementById('menu-tbl').innerHTML=S.menu.map(m=>{
     const mg=m.harga?(((m.harga-m.hpp)/m.harga)*100).toFixed(0):0;
-    return `<tr><td><span style="margin-right:7px">${m.icon||'🍽️'}</span><strong>${m.nama}</strong></td><td><span class="badge badge-amber">${m.kategori}</span></td><td style="color:var(--amber);font-weight:700">${fmt(m.harga)}</td><td style="color:var(--muted)">${fmt(m.hpp||0)}</td><td><span class="badge ${mg>=40?'badge-green':mg>=20?'badge-amber':'badge-red'}">${mg}%</span></td><td><span class="badge ${m.status==='aktif'?'badge-green':'badge-red'}">${m.status}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openMenuModal('${m.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteMenu('${m.id}')">Hapus</button></td></tr>`;
+    return `<tr><td><span style="margin-right:7px">${esc(m.icon||'🍽️')}</span><strong>${esc(m.nama)}</strong></td><td><span class="badge badge-amber">${esc(m.kategori)}</span></td><td style="color:var(--amber);font-weight:700">${fmt(m.harga)}</td><td style="color:var(--muted)">${fmt(m.hpp||0)}</td><td><span class="badge ${mg>=40?'badge-green':mg>=20?'badge-amber':'badge-red'}">${mg}%</span></td><td><span class="badge ${m.status==='aktif'?'badge-green':'badge-red'}">${esc(m.status)}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openMenuModal('${m.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteMenu('${m.id}')">Hapus</button></td></tr>`;
   }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Belum ada menu</td></tr>';
 }
 
@@ -2121,8 +2124,16 @@ async function saveMenu() {
   const eid=document.getElementById('mm-eid').value;
   loading(true,'Menyimpan...');
   try {
-    if(eid){await sb.from('menu').update(data).eq('id',eid);const i=S.menu.findIndex(x=>x.id===eid);S.menu[i]={...S.menu[i],...data};}
-    else{const {data:d}=await sb.from('menu').insert({...data,toko_id:S.toko.id}).select().single();S.menu.push(d);}
+    if(eid){
+      const {error:e}=await sb.from('menu').update(data).eq('id',eid);
+      if(e) throw new Error(e.message);
+      const i=S.menu.findIndex(x=>x.id===eid);S.menu[i]={...S.menu[i],...data};
+    } else {
+      const {data:d,error:e}=await sb.from('menu').insert({...data,toko_id:S.toko.id}).select().single();
+      if(e) throw new Error(e.message);
+      if(!d) throw new Error('Insert gagal');
+      S.menu.push(d);
+    }
     loading(false);closeModal('menu-modal');renderMenuPage();renderPOS();toast('Menu disimpan!','success');
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
@@ -2130,9 +2141,12 @@ async function saveMenu() {
 async function deleteMenu(id) {
   if(!confirm('Hapus menu ini?'))return;
   loading(true,'Menghapus...');
-  await sb.from('menu').delete().eq('id',id);
-  S.menu=S.menu.filter(m=>m.id!==id);
-  loading(false);renderMenuPage();renderPOS();toast('Menu dihapus','info');
+  try {
+    const {error}=await sb.from('menu').delete().eq('id',id);
+    if(error) throw new Error(error.message);
+    S.menu=S.menu.filter(m=>m.id!==id);
+    loading(false);renderMenuPage();renderPOS();toast('Menu dihapus','info');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
 
 // ================================================================
@@ -2145,7 +2159,7 @@ function renderStokPage() {
     const pct=b.min_stok?(b.stok/b.min_stok*100):100;
     const st=pct<=0?'badge-red':pct<=100?'badge-amber':'badge-green';
     const stxt=pct<=0?'Habis':pct<=100?'Kritis':'Aman';
-    return `<tr><td><strong>${b.nama}</strong></td><td style="color:var(--muted)">${b.satuan}</td><td style="font-weight:700">${b.stok.toLocaleString('id-ID')}</td><td style="color:var(--muted)">${b.min_stok}</td><td style="color:var(--muted)">${fmt(b.harga_satuan)}/${b.satuan}</td><td><span class="badge ${st}">${stxt}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button></td></tr>`;
+    return `<tr><td><strong>${esc(b.nama)}</strong></td><td style="color:var(--muted)">${esc(b.satuan)}</td><td style="font-weight:700">${b.stok.toLocaleString('id-ID')}</td><td style="color:var(--muted)">${b.min_stok}</td><td style="color:var(--muted)">${fmt(b.harga_satuan)}/${b.satuan}</td><td><span class="badge ${st}">${stxt}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button></td></tr>`;
   }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Belum ada bahan</td></tr>';
   renderStokLog();
 }
@@ -2169,8 +2183,16 @@ async function saveStok() {
   const eid=document.getElementById('sm-eid').value;
   loading(true,'Menyimpan...');
   try {
-    if(eid){await sb.from('bahan').update(data).eq('id',eid);const i=S.bahan.findIndex(x=>x.id===eid);S.bahan[i]={...S.bahan[i],...data};}
-    else{const {data:d}=await sb.from('bahan').insert({...data,toko_id:S.toko.id}).select().single();S.bahan.push(d);}
+    if(eid){
+      const {error:e}=await sb.from('bahan').update(data).eq('id',eid);
+      if(e) throw new Error(e.message);
+      const i=S.bahan.findIndex(x=>x.id===eid);S.bahan[i]={...S.bahan[i],...data};
+    } else {
+      const {data:d,error:e}=await sb.from('bahan').insert({...data,toko_id:S.toko.id}).select().single();
+      if(e) throw new Error(e.message);
+      if(!d) throw new Error('Insert gagal');
+      S.bahan.push(d);
+    }
     loading(false);closeModal('stok-modal');renderStokPage();toast('Bahan disimpan!','success');
   } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
@@ -2178,9 +2200,12 @@ async function saveStok() {
 async function deleteBahan(id) {
   if(!confirm('Hapus bahan ini?'))return;
   loading(true,'Menghapus...');
-  await sb.from('bahan').delete().eq('id',id);
-  S.bahan=S.bahan.filter(b=>b.id!==id);
-  loading(false);renderStokPage();toast('Bahan dihapus','info');
+  try {
+    const {error}=await sb.from('bahan').delete().eq('id',id);
+    if(error) throw new Error(error.message);
+    S.bahan=S.bahan.filter(b=>b.id!==id);
+    loading(false);renderStokPage();toast('Bahan dihapus','info');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
 
 function openRestockModal() {
@@ -2196,11 +2221,14 @@ async function saveRestock() {
   const b=S.bahan.find(x=>x.id===id);
   const newStok=b.stok+qty;
   loading(true,'Restock...');
-  await sb.from('bahan').update({stok:newStok}).eq('id',id);
-  b.stok=newStok;
-  addStokLog(b.nama, +qty, 'Restock manual');
-  loading(false);closeModal('restock-modal');renderStokPage();updateNavBadges();
-  toast(`Stok ${b.nama} +${qty} ${b.satuan}!`,'success');
+  try {
+    const {error}=await sb.from('bahan').update({stok:newStok}).eq('id',id);
+    if(error) throw new Error(error.message);
+    b.stok=newStok;
+    addStokLog(b.nama, +qty, 'Restock manual');
+    loading(false);closeModal('restock-modal');renderStokPage();updateNavBadges();
+    toast(`Stok ${b.nama} +${qty} ${b.satuan}!`,'success');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
 
 // ================================================================
@@ -2209,10 +2237,10 @@ async function saveRestock() {
 function renderResepPage() {
   document.getElementById('resep-list').innerHTML=S.menu.filter(m=>m.status==='aktif').map(m=>{
     const ings=S.resep.filter(r=>r.menu_id===m.id);
-    const ingText=ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?`${b.nama} ${r.qty} ${b.satuan}`:'?';}).join(', ');
+    const ingText=ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?`${esc(b.nama)} ${r.qty} ${esc(b.satuan)}`:'?';}).join(', ');
     return `<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px">
-      <div style="font-size:1.7rem;flex-shrink:0">${m.icon||'🍽️'}</div>
-      <div style="flex:1"><div style="font-weight:700;margin-bottom:3px">${m.nama}</div><div style="font-size:.75rem;color:var(--muted)">${ingText||'Belum ada resep'}</div></div>
+      <div style="font-size:1.7rem;flex-shrink:0">${esc(m.icon||'🍽️')}</div>
+      <div style="flex:1"><div style="font-weight:700;margin-bottom:3px">${esc(m.nama)}</div><div style="font-size:.75rem;color:var(--muted)">${ingText||'Belum ada resep'}</div></div>
       <button class="btn btn-ghost btn-sm" onclick="openResepModal('${m.id}')">Edit</button>
     </div>`;
   }).join('')||'<div class="empty"><div class="empty-ico">📋</div><p>Tidak ada menu aktif</p></div>';
@@ -2278,8 +2306,8 @@ async function saveResep() {
 // PENGGUNA
 // ================================================================
 function renderUserPage() {
-  document.getElementById('user-tbl').innerHTML=S.pengguna.map(u=>`
-    <tr><td><strong>${u.nama}</strong></td><td><span class="badge ${u.role==='owner'?'badge-purple':'badge-blue'}">${u.role==='owner'?'👑 Owner':'🧾 Kasir'}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openUserModal('${u.id}')">Edit</button>${S.currentUser.id!==u.id?`<button class="btn btn-sm btn-red" onclick="deleteUser('${u.id}')">Hapus</button>`:''}</td></tr>`).join('');
+  document.getElementById('user-tbl').innerHTML=S.pengguna.filter(u=>u&&u.id).map(u=>`
+    <tr><td><strong>${esc(u.nama)}</strong></td><td><span class="badge ${u.role==='owner'?'badge-purple':'badge-blue'}">${u.role==='owner'?'👑 Owner':'🧾 Kasir'}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openUserModal('${u.id}')">Edit</button>${S.currentUser.id!==u.id?`<button class="btn btn-sm btn-red" onclick="deleteUser('${u.id}')">Hapus</button>`:''}</td></tr>`).join('');
 }
 
 function openUserModal(id) {
@@ -2323,9 +2351,13 @@ async function saveUser() {
 
 async function deleteUser(id) {
   if(!confirm('Hapus pengguna ini?'))return;
-  await sb.from('pengguna').delete().eq('id',id);
-  S.pengguna=S.pengguna.filter(u=>u.id!==id);
-  renderUserPage();toast('Pengguna dihapus','info');
+  loading(true,'Menghapus...');
+  try {
+    const {error}=await sb.from('pengguna').delete().eq('id',id);
+    if(error) throw new Error(error.message);
+    S.pengguna=S.pengguna.filter(u=>u.id!==id);
+    loading(false);renderUserPage();toast('Pengguna dihapus','info');
+  } catch(e){toast('Error: '+e.message,'error');loading(false);}
 }
 
 // ================================================================
@@ -2767,6 +2799,8 @@ function retryLoad() {
 
 function confirmGantiToko() {
   if (!confirm('Yakin mau ganti toko? Perangkat ini akan kembali ke halaman setup.\n\nData toko lama tidak akan hilang.')) return;
+  if (_realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel=null; }
+  if (_premChannel) { sb.removeChannel(_premChannel); _premChannel=null; }
   localStorage.removeItem('kk_toko_id');
   S.toko = null; S.currentUser = null; S.cart = [];
   showOnboarding();
