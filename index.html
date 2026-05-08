@@ -1174,6 +1174,35 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ================================================================
+// SESSION HELPER — pastikan ada auth session sebelum write ke DB
+// ================================================================
+async function ensureSession() {
+  // Cek apakah session aktif
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) return; // sudah ada session, lanjut
+
+  // Coba sign in ulang pakai credentials yang tersimpan
+  const authE = localStorage.getItem('kk_auth_e');
+  const authP = localStorage.getItem('kk_auth_p');
+  if (authE && authP) {
+    const { error } = await sb.auth.signInWithPassword({ email: authE, password: authP });
+    if (!error) return; // berhasil sign in
+    // Jika rate limit — jangan hapus credentials, cukup kasih tau user
+    if (error.status === 429 || (error.message||'').toLowerCase().includes('rate')) {
+      throw new Error('Terlalu banyak percobaan login. Tunggu beberapa menit lalu coba lagi.');
+    }
+    // Credentials benar-benar invalid — hapus
+    localStorage.removeItem('kk_auth_e');
+    localStorage.removeItem('kk_auth_p');
+  }
+  // Tidak ada session dan tidak bisa login — cek apakah toko butuh reconnect
+  if (S.toko?.auth_email) {
+    throw new Error('Sesi berakhir. Silakan hubungkan ulang toko kamu lewat menu Pengaturan → Hubungkan Perangkat.');
+  }
+  // Toko lama tanpa auth (escape hatch RLS) — biarkan lanjut, Supabase akan pakai anon
+}
+
+// ================================================================
 // STATE
 // ================================================================
 let S = {
@@ -2572,10 +2601,18 @@ async function saveMenu() {
   const eid=document.getElementById('mm-eid').value;
   loading(true,'Menyimpan...');
   try {
-    if(eid){await sb.from('menu').update(data).eq('id',eid);const i=S.menu.findIndex(x=>x.id===eid);S.menu[i]={...S.menu[i],...data};}
-    else{const {data:d}=await sb.from('menu').insert({...data,toko_id:S.toko.id}).select().single();S.menu.push(d);}
+    await ensureSession();
+    if(eid){
+      const {error:updErr}=await sb.from('menu').update(data).eq('id',eid);
+      if(updErr) throw updErr;
+      const i=S.menu.findIndex(x=>x.id===eid);S.menu[i]={...S.menu[i],...data};
+    } else {
+      const {data:d,error:insErr}=await sb.from('menu').insert({...data,toko_id:S.toko.id}).select().single();
+      if(insErr) throw insErr;
+      S.menu.push(d);
+    }
     loading(false);closeModal('menu-modal');renderMenuPage();renderPOS();toast('Menu disimpan!','success');
-  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+  } catch(e){toast('Gagal simpan menu: '+e.message,'error');loading(false);}
 }
 
 async function deleteMenu(id) {
@@ -2748,10 +2785,18 @@ async function saveStok() {
   const eid=document.getElementById('sm-eid').value;
   loading(true,'Menyimpan...');
   try {
-    if(eid){await sb.from('bahan').update(data).eq('id',eid);const i=S.bahan.findIndex(x=>x.id===eid);S.bahan[i]={...S.bahan[i],...data};}
-    else{const {data:d}=await sb.from('bahan').insert({...data,toko_id:S.toko.id}).select().single();S.bahan.push(d);}
+    await ensureSession();
+    if(eid){
+      const {error:updErr}=await sb.from('bahan').update(data).eq('id',eid);
+      if(updErr) throw updErr;
+      const i=S.bahan.findIndex(x=>x.id===eid);S.bahan[i]={...S.bahan[i],...data};
+    } else {
+      const {data:d,error:insErr}=await sb.from('bahan').insert({...data,toko_id:S.toko.id}).select().single();
+      if(insErr) throw insErr;
+      S.bahan.push(d);
+    }
     loading(false);closeModal('stok-modal');renderStokPage();toast('Bahan disimpan!','success');
-  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+  } catch(e){toast('Gagal simpan bahan: '+e.message,'error');loading(false);}
 }
 
 async function deleteBahan(id) {
@@ -3029,10 +3074,18 @@ async function saveUser() {
   const eid=document.getElementById('um-eid').value;
   loading(true,'Menyimpan...');
   try {
-    if(eid){await sb.from('pengguna').update(data).eq('id',eid);const i=S.pengguna.findIndex(x=>x.id===eid);S.pengguna[i]={...S.pengguna[i],...data};}
-    else{const {data:d}=await sb.from('pengguna').insert({...data,toko_id:S.toko.id}).select().single();S.pengguna.push(d);}
+    await ensureSession();
+    if(eid){
+      const {error:updErr}=await sb.from('pengguna').update(data).eq('id',eid);
+      if(updErr) throw updErr;
+      const i=S.pengguna.findIndex(x=>x.id===eid);S.pengguna[i]={...S.pengguna[i],...data};
+    } else {
+      const {data:d,error:insErr}=await sb.from('pengguna').insert({...data,toko_id:S.toko.id}).select().single();
+      if(insErr) throw insErr;
+      S.pengguna.push(d);
+    }
     loading(false);closeModal('user-modal');renderUserPage();toast('Pengguna disimpan!','success');
-  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+  } catch(e){toast('Gagal simpan pengguna: '+e.message,'error');loading(false);}
 }
 
 async function deleteUser(id) {
@@ -3417,11 +3470,20 @@ async function tryLoadApp(isRetry=false) {
     try {
       // Sign in ke Supabase Auth dulu kalau ada credentials tersimpan
       if (authE && authP) {
-        const {error:sErr} = await sb.auth.signInWithPassword({email:authE, password:authP});
-        if (sErr) {
-          // Credentials expired / invalid — clear dan lanjut tanpa auth (toko lama)
-          localStorage.removeItem('kk_auth_e');
-          localStorage.removeItem('kk_auth_p');
+        // Cek dulu apakah sudah ada session aktif (hindari sign-in berulang → rate limit)
+        const { data: { session: existingSession } } = await sb.auth.getSession();
+        if (!existingSession) {
+          const {error:sErr} = await sb.auth.signInWithPassword({email:authE, password:authP});
+          if (sErr) {
+            // Rate limit: jangan hapus credentials, cukup lanjut tanpa auth sementara
+            const isRateLimit = sErr.status===429 || (sErr.message||'').toLowerCase().includes('rate');
+            if (!isRateLimit) {
+              // Credentials benar-benar invalid — hapus
+              localStorage.removeItem('kk_auth_e');
+              localStorage.removeItem('kk_auth_p');
+            }
+            // Lanjut tanpa auth — untuk toko lama (escape hatch RLS) masih bisa baca data
+          }
         }
       }
       const {data,error} = await Promise.race([

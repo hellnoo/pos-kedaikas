@@ -130,14 +130,18 @@ CREATE POLICY st_rls ON setoran_kas FOR ALL USING (
 );
 
 -- 7. Fungsi RECONNECT — SECURITY DEFINER (bypass RLS, verifikasi PIN owner)
+--    Mendukung lazy migration: toko lama yang belum punya auth_email
+--    akan dibuatkan akun auth secara otomatis saat pertama kali reconnect.
 CREATE OR REPLACE FUNCTION reconnect_toko(p_toko_id uuid, p_pin_hash text)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
-  v_toko    toko%ROWTYPE;
-  v_owner   pengguna%ROWTYPE;
-  v_match   boolean := false;
+  v_toko      toko%ROWTYPE;
+  v_owner     pengguna%ROWTYPE;
+  v_user_id   uuid;
+  v_email     text;
+  v_password  text;
 BEGIN
-  -- Cari owner dengan PIN yang cocok (support SHA-256 + base64 legacy)
+  -- Cari owner dengan PIN yang cocok (support SHA-256 + base64 legacy + plaintext)
   SELECT * INTO v_owner
   FROM pengguna
   WHERE toko_id = p_toko_id
@@ -151,13 +155,59 @@ BEGIN
 
   SELECT * INTO v_toko FROM toko WHERE id = p_toko_id;
 
-  IF v_toko.auth_email IS NULL THEN
-    RAISE EXCEPTION 'Toko belum memiliki akun auth. Hubungi admin.';
+  -- Jika toko sudah punya auth_email, langsung kembalikan kredensial
+  IF v_toko.auth_email IS NOT NULL THEN
+    RETURN json_build_object(
+      'auth_email',    v_toko.auth_email,
+      'auth_password', v_toko.auth_password
+    );
   END IF;
 
+  -- === LAZY MIGRATION: toko lama tanpa akun auth ===
+  -- Buatkan kredensial auth secara otomatis
+  v_user_id := gen_random_uuid();
+  v_email    := 'toko_' || replace(p_toko_id::text, '-', '') || '@kedaikas.app';
+  v_password := encode(gen_random_bytes(18), 'base64');
+
+  -- Buat auth user (email langsung confirmed, tanpa kirim email)
+  INSERT INTO auth.users (
+    id, instance_id, aud, role,
+    email, encrypted_password,
+    email_confirmed_at, created_at, updated_at,
+    raw_app_meta_data, raw_user_meta_data,
+    is_super_admin, confirmation_token, recovery_token,
+    email_change_token_new, email_change
+  ) VALUES (
+    v_user_id,
+    '00000000-0000-0000-0000-000000000000',
+    'authenticated', 'authenticated',
+    v_email, crypt(v_password, gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}', '{}',
+    false, '', '', '', ''
+  );
+
+  -- Buat auth identity (wajib agar signInWithPassword bekerja)
+  INSERT INTO auth.identities (
+    id, provider_id, user_id, identity_data, provider,
+    last_sign_in_at, created_at, updated_at
+  ) VALUES (
+    gen_random_uuid(), v_email, v_user_id,
+    json_build_object('sub', v_user_id::text, 'email', v_email),
+    'email',
+    now(), now(), now()
+  );
+
+  -- Update toko dengan auth credentials baru
+  UPDATE toko
+  SET auth_id       = v_user_id,
+      auth_email    = v_email,
+      auth_password = v_password
+  WHERE id = p_toko_id;
+
   RETURN json_build_object(
-    'auth_email',    v_toko.auth_email,
-    'auth_password', v_toko.auth_password
+    'auth_email',    v_email,
+    'auth_password', v_password
   );
 END;
 $$;
