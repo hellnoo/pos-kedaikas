@@ -940,6 +940,16 @@ button{touch-action:manipulation}
           </div>
           <p style="font-size:.7rem;color:var(--muted);margin-top:8px">💡 QRIS string bisa didapat dari aplikasi bank (BCA, BRI, BNI, GoPay, OVO, dll) — pilih <em>Terima QRIS</em> lalu copy string-nya.</p>
         </div>
+        <div class="set-section">
+          <div class="set-section-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Ganti PIN Owner</div>
+          <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Ganti PIN 4 digit yang kamu pakai untuk login setiap hari.</p>
+          <div class="g2" style="margin-bottom:10px">
+            <div class="fg"><label class="fl">PIN Lama</label><input class="fi" id="set-old-pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN saat ini" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+            <div class="fg"><label class="fl">PIN Baru</label><input class="fi" id="set-new-pin" type="password" inputmode="numeric" maxlength="4" placeholder="4 digit baru" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+          </div>
+          <div class="fg" style="margin-bottom:12px"><label class="fl">Konfirmasi PIN Baru</label><input class="fi" id="set-conf-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Ulangi PIN baru" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+          <button class="btn btn-amber" onclick="changeOwnerPin()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Simpan PIN Baru</button>
+        </div>
         <div class="set-section" style="border-color:rgba(239,68,68,.25)">
           <div class="set-section-title" style="color:var(--red)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0" ><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Ganti Toko</div>
           <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Pindah ke toko lain atau reset perangkat ini. Data toko lama tidak hilang, tapi kamu perlu setup ulang di perangkat ini.</p>
@@ -3181,7 +3191,9 @@ async function saveSettingsToko() {
   if(!nama){toast('Nama toko wajib!','error');return;}
   loading(true,'Menyimpan...');
   try {
-    await sb.from('toko').update({nama,alamat,telepon:telp,logo_emoji:logo}).eq('id',S.toko.id);
+    await ensureSession();
+    const {error}=await sb.from('toko').update({nama,alamat,telepon:telp,logo_emoji:logo}).eq('id',S.toko.id);
+    if(error) throw error;
     S.toko={...S.toko,nama,alamat,telepon:telp,logo_emoji:logo};
     document.getElementById('sb-store-name').textContent=nama;
     document.getElementById('sb-store-ico').textContent=logo;
@@ -3196,6 +3208,7 @@ async function saveSettingsQRIS() {
   else localStorage.removeItem('qris_'+S.toko.id);
   // Simpan ke Supabase DB (sync lintas device)
   try {
+    await ensureSession();
     await sb.from('toko').update({qris_string: qris||null}).eq('id', S.toko.id);
     S.toko.qris_string = qris||null;
     toast(qris ? '✅ QRIS disimpan & sync ke semua device!' : 'QRIS dihapus', 'success');
@@ -3207,24 +3220,31 @@ async function saveSettingsQRIS() {
   if (qris) previewQRIS();
 }
 
-async function changePassword() {
-  const oldp=document.getElementById('set-old-pass').value;
-  const newp=document.getElementById('set-new-pass').value;
-  const conf=document.getElementById('set-conf-pass').value;
-  if(!oldp||!newp){toast('Isi semua field password!','error');return;}
-  if(newp.length<6){toast('Password baru minimal 6 karakter!','error');return;}
-  if(newp!==conf){toast('Konfirmasi password tidak cocok!','error');return;}
-  if(!checkPass(oldp,S.toko.password_hash)){toast('Password lama salah!','error');return;}
+async function changeOwnerPin() {
+  const oldPin = document.getElementById('set-old-pin').value.replace(/\D/g,'');
+  const newPin = document.getElementById('set-new-pin').value.replace(/\D/g,'');
+  const confPin = document.getElementById('set-conf-pin').value.replace(/\D/g,'');
+  if(oldPin.length!==4||newPin.length!==4){toast('PIN harus 4 digit angka!','error');return;}
+  if(newPin!==confPin){toast('Konfirmasi PIN tidak cocok!','error');return;}
+  // Verifikasi PIN lama — cek SHA-256, base64 legacy, dan plaintext
+  const owner = S.pengguna.find(p=>p.id===S.currentUser?.id);
+  if(!owner){toast('Data pengguna tidak ditemukan','error');return;}
+  const oldHash256 = await hashPass(oldPin);
+  const oldHashLeg  = hashPassLegacy(oldPin);
+  const pinMatch = owner.pin===oldHash256 || owner.pin===oldHashLeg || owner.pin===oldPin;
+  if(!pinMatch){toast('PIN lama salah!','error');document.getElementById('set-old-pin').value='';document.getElementById('set-old-pin').focus();return;}
   loading(true,'Menyimpan...');
   try {
-    const h=await hashPass(newp);
-    await sb.from('toko').update({password_hash:h}).eq('id',S.toko.id);
-    S.toko.password_hash=h;
-    document.getElementById('set-old-pass').value='';
-    document.getElementById('set-new-pass').value='';
-    document.getElementById('set-conf-pass').value='';
-    loading(false);toast('Password berhasil diubah!','success');
-  } catch(e){toast('Error: '+e.message,'error');loading(false);}
+    await ensureSession();
+    const newHash = await hashPass(newPin);
+    const {error}=await sb.from('pengguna').update({pin:newHash}).eq('id',owner.id);
+    if(error) throw error;
+    owner.pin = newHash;
+    document.getElementById('set-old-pin').value='';
+    document.getElementById('set-new-pin').value='';
+    document.getElementById('set-conf-pin').value='';
+    loading(false);toast('PIN berhasil diubah!','success');
+  } catch(e){toast('Gagal ganti PIN: '+e.message,'error');loading(false);}
 }
 
 // ================================================================
