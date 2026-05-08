@@ -597,22 +597,27 @@ button{touch-action:manipulation}
     <div style="width:100%;max-width:420px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:32px 28px;box-shadow:0 24px 80px rgba(0,0,0,.5);text-align:center">
       <div style="font-size:2.8rem;margin-bottom:12px">🎉</div>
       <div style="font-family:'Sora',sans-serif;font-size:1.15rem;font-weight:800;margin-bottom:6px">Toko berhasil didaftarkan!</div>
-      <div style="font-size:.85rem;color:var(--muted);margin-bottom:6px" id="act-nama"></div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:2px" id="act-nama"></div>
       <div style="font-size:.72rem;color:var(--muted);margin-bottom:24px">ID: <span id="act-id" style="font-family:'Sora',sans-serif;color:var(--amber)"></span></div>
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:20px;text-align:left">
-        <div style="font-size:.78rem;font-weight:700;margin-bottom:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;flex-shrink:0" ><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> Langkah berikutnya:</div>
-        <div style="font-size:.78rem;color:var(--muted);line-height:1.8">
-          1. Klik tombol WA di bawah<br>
-          2. Kirim pesan ke kami<br>
-          3. Kami akan balas dengan <strong style="color:var(--text)">PIN akses</strong> kamu<br>
-          4. Masuk ke app dengan PIN tersebut
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:20px;text-align:left">
+        <div style="font-size:.82rem;font-weight:700;margin-bottom:14px;color:var(--text)">🔐 Buat PIN kamu</div>
+        <div style="font-size:.76rem;color:var(--muted);margin-bottom:14px">PIN 4 digit ini dipakai setiap kali kamu masuk ke app. Jangan lupa ya!</div>
+        <div class="fg" style="margin-bottom:10px">
+          <label class="fl">PIN Baru</label>
+          <input class="fi" id="act-pin1" type="password" inputmode="numeric" maxlength="4" placeholder="4 digit angka"
+            style="letter-spacing:8px;font-size:1.2rem;text-align:center"
+            oninput="this.value=this.value.replace(/\D/g,'')"
+            onkeydown="if(event.key==='Enter')document.getElementById('act-pin2').focus()">
         </div>
+        <div class="fg" style="margin-bottom:16px">
+          <label class="fl">Konfirmasi PIN</label>
+          <input class="fi" id="act-pin2" type="password" inputmode="numeric" maxlength="4" placeholder="Ulangi PIN"
+            style="letter-spacing:8px;font-size:1.2rem;text-align:center"
+            oninput="this.value=this.value.replace(/\D/g,'')"
+            onkeydown="if(event.key==='Enter')setOwnerPin()">
+        </div>
+        <button class="btn btn-amber" style="width:100%" onclick="setOwnerPin()" id="act-pin-btn">Aktifkan Toko →</button>
       </div>
-      <a id="act-wa-btn" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border-radius:var(--rs);background:#25d366;color:#fff;font-size:.9rem;font-weight:700;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:10px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        Minta PIN via WhatsApp
-      </a>
-      <button onclick="showPinScreen()" style="background:none;border:none;color:var(--muted);font-size:.76rem;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Sudah punya PIN? Masuk →</button>
     </div>
   </div>
 </div>
@@ -1266,9 +1271,31 @@ function showActivationScreen(namaToko, tokoId) {
   const shortId = tokoId.slice(0,8).toUpperCase();
   document.getElementById('act-nama').textContent = namaToko;
   document.getElementById('act-id').textContent = shortId;
-  const msg = encodeURIComponent(`Halo, toko saya *${namaToko}* (ID: ${shortId}) baru daftar di KedaiKas. Mohon kirimkan PIN akses saya. Terima kasih!`);
-  document.getElementById('act-wa-btn').href = `https://wa.me/6281245400031?text=${msg}`;
+  document.getElementById('act-pin1').value = '';
+  document.getElementById('act-pin2').value = '';
   showScreen('activation');
+}
+
+async function setOwnerPin() {
+  const pin1 = document.getElementById('act-pin1').value.replace(/\D/g,'');
+  const pin2 = document.getElementById('act-pin2').value.replace(/\D/g,'');
+  if (pin1.length !== 4) { toast('PIN harus 4 digit angka','error'); return; }
+  if (pin1 !== pin2) { toast('Konfirmasi PIN tidak cocok, coba lagi','error'); document.getElementById('act-pin2').value=''; document.getElementById('act-pin2').focus(); return; }
+  const btn = document.getElementById('act-pin-btn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    const pinHash = await hashPass(pin1);
+    const owner = S.pengguna.find(p => p.role === 'owner');
+    if (!owner) throw new Error('Data pengguna tidak ditemukan');
+    const {error} = await sb.from('pengguna').update({pin: pinHash}).eq('id', owner.id);
+    if (error) throw error;
+    owner.pin = pinHash;
+    toast('PIN berhasil dibuat! Selamat datang 🎉','success');
+    showPinScreen();
+  } catch(e) {
+    toast('Gagal set PIN: ' + e.message,'error');
+    btn.disabled = false; btn.textContent = 'Aktifkan Toko →';
+  }
 }
 
 let _obAnim = null;
@@ -2192,6 +2219,7 @@ async function processCheckout(fromQRISConfirm=false) {
 
   loading(true,'Menyimpan transaksi...');
   try {
+    await ensureSession();
     // Deduct stok
     for(const item of S.cart) {
       const ings=S.resep.filter(r=>r.menu_id===item.menuId);
@@ -2295,8 +2323,10 @@ async function saveKasAwal() {
   const jumlah=parseInt(raw)||0;
   loading(true,'Menyimpan kas awal...');
   try {
+    await ensureSession();
     const record={toko_id:S.toko.id,kasir_id:S.currentUser.id,kasir_nama:S.currentUser.nama,jumlah_awal:jumlah,tanggal:todayISO(),waktu:nowStr()};
-    const {data}=await sb.from('kas_shift').insert(record).select().single();
+    const {data,error:kasErr}=await sb.from('kas_shift').insert(record).select().single();
+    if(kasErr) throw kasErr;
     S.kasShift.unshift(data);
     const badge=document.getElementById('kas-awal-badge');
     if(badge){badge.textContent='✓';badge.style.display='inline-block';}
@@ -2341,8 +2371,10 @@ async function saveSetoran() {
   if(!jumlah){toast('Masukkan jumlah setoran!','error');return;}
   loading(true,'Menyimpan setoran...');
   try {
+    await ensureSession();
     const record={toko_id:S.toko.id,kasir_id:S.currentUser.id,kasir_nama:S.currentUser.nama,jumlah,catatan,status:'menunggu',tanggal:todayISO(),waktu:nowStr()};
-    const {data}=await sb.from('setoran_kas').insert(record).select().single();
+    const {data,error:setErr}=await sb.from('setoran_kas').insert(record).select().single();
+    if(setErr) throw setErr;
     S.setoranKas.unshift(data);
     updateSetoranBadge();
     if(S.currentUser?.role==='owner') renderDashboard();
@@ -2618,9 +2650,13 @@ async function saveMenu() {
 async function deleteMenu(id) {
   if(!confirm('Hapus menu ini?'))return;
   loading(true,'Menghapus...');
-  await sb.from('menu').delete().eq('id',id);
-  S.menu=S.menu.filter(m=>m.id!==id);
-  loading(false);renderMenuPage();renderPOS();toast('Menu dihapus','info');
+  try {
+    await ensureSession();
+    const {error}=await sb.from('menu').delete().eq('id',id);
+    if(error) throw error;
+    S.menu=S.menu.filter(m=>m.id!==id);
+    loading(false);renderMenuPage();renderPOS();toast('Menu dihapus','info');
+  } catch(e){toast('Gagal hapus: '+e.message,'error');loading(false);}
 }
 
 // Konversi qty resep ke satuan stok (pcs/satuan bahan)
@@ -2802,9 +2838,13 @@ async function saveStok() {
 async function deleteBahan(id) {
   if(!confirm('Hapus bahan ini?'))return;
   loading(true,'Menghapus...');
-  await sb.from('bahan').delete().eq('id',id);
-  S.bahan=S.bahan.filter(b=>b.id!==id);
-  loading(false);renderStokPage();toast('Bahan dihapus','info');
+  try {
+    await ensureSession();
+    const {error}=await sb.from('bahan').delete().eq('id',id);
+    if(error) throw error;
+    S.bahan=S.bahan.filter(b=>b.id!==id);
+    loading(false);renderStokPage();toast('Bahan dihapus','info');
+  } catch(e){toast('Gagal hapus: '+e.message,'error');loading(false);}
 }
 
 function openRestockModal() {
@@ -3027,8 +3067,10 @@ async function saveResep() {
 
   loading(true,'Menyimpan resep...');
   try {
-    await sb.from('resep').delete().eq('menu_id',S.editResepMenuId);
-    if(newResep.length) await sb.from('resep').insert(newResep);
+    await ensureSession();
+    const {error:delResepErr}=await sb.from('resep').delete().eq('menu_id',S.editResepMenuId);
+    if(delResepErr) throw delResepErr;
+    if(newResep.length){const {error:insResepErr}=await sb.from('resep').insert(newResep);if(insResepErr) throw insResepErr;}
     // Reload resep — hanya untuk menu milik toko ini
     const menuIds=S.menu.map(m=>m.id);
     const {data}=menuIds.length ? await sb.from('resep').select('*').in('menu_id',menuIds) : {data:[]};
@@ -3070,7 +3112,8 @@ async function saveUser() {
   const nama=document.getElementById('um-name').value.trim();
   const pin=document.getElementById('um-pin').value.trim();
   if(!nama||pin.length!==4){toast('Nama wajib & PIN 4 digit!','error');return;}
-  const data={nama,role:document.getElementById('um-role').value,pin:hashPass(pin)};
+  const pinHash = await hashPass(pin);
+  const data={nama,role:document.getElementById('um-role').value,pin:pinHash};
   const eid=document.getElementById('um-eid').value;
   loading(true,'Menyimpan...');
   try {
@@ -3090,9 +3133,14 @@ async function saveUser() {
 
 async function deleteUser(id) {
   if(!confirm('Hapus pengguna ini?'))return;
-  await sb.from('pengguna').delete().eq('id',id);
-  S.pengguna=S.pengguna.filter(u=>u.id!==id);
-  renderUserPage();toast('Pengguna dihapus','info');
+  loading(true,'Menghapus...');
+  try {
+    await ensureSession();
+    const {error}=await sb.from('pengguna').delete().eq('id',id);
+    if(error) throw error;
+    S.pengguna=S.pengguna.filter(u=>u.id!==id);
+    loading(false);renderUserPage();toast('Pengguna dihapus','info');
+  } catch(e){toast('Gagal hapus: '+e.message,'error');loading(false);}
 }
 
 // ================================================================
@@ -3169,7 +3217,7 @@ async function changePassword() {
   if(!checkPass(oldp,S.toko.password_hash)){toast('Password lama salah!','error');return;}
   loading(true,'Menyimpan...');
   try {
-    const h=hashPass(newp);
+    const h=await hashPass(newp);
     await sb.from('toko').update({password_hash:h}).eq('id',S.toko.id);
     S.toko.password_hash=h;
     document.getElementById('set-old-pass').value='';
