@@ -141,16 +141,15 @@ DECLARE
   v_email     text;
   v_password  text;
 BEGIN
-  -- Cari owner dengan PIN yang cocok (support SHA-256 + base64 legacy + plaintext)
+  -- Cari pengguna dengan PIN yang cocok (owner atau kasir boleh reconnect)
   SELECT * INTO v_owner
   FROM pengguna
   WHERE toko_id = p_toko_id
-    AND role = 'owner'
     AND pin = p_pin_hash
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'PIN salah atau bukan owner';
+    RAISE EXCEPTION 'PIN salah';
   END IF;
 
   SELECT * INTO v_toko FROM toko WHERE id = p_toko_id;
