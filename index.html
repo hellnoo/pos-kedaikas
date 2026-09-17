@@ -11,14 +11,14 @@
 <style>
 :root {
   --bg:#07090f;--bg2:#0d1018;--bg3:#121520;--sidebar:#090c14;
-  --border:#1a1e2e;--border2:#232840;
-  --text:#eef0f8;--muted:#4e5470;--muted2:#7880a2;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.11);
+  --text:#edf0fb;--muted:#4a5070;--muted2:#7278a0;
   --amber:#f59e0b;--amber-d:#d97706;--amber-l:#fde68a;--amber-p:rgba(245,158,11,.09);
   --green:#10b981;--green-d:#059669;--green-p:rgba(16,185,129,.09);
   --red:#f43f5e;--red-p:rgba(244,63,94,.1);
   --blue:#3b82f6;--blue-p:rgba(59,130,246,.1);
   --purple:#8b5cf6;
-  --r:14px;--rs:9px;
+  --r:12px;--rs:8px;
   --sh:0 4px 28px rgba(0,0,0,.55);
   --sh-xl:0 24px 72px rgba(0,0,0,.75);
 }
@@ -97,7 +97,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .sb-sec{font-size:.58rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;font-weight:700;padding:12px 6px 5px;margin-top:2px}
 .sb-btn{width:100%;padding:8px 10px;border:none;border-radius:9px;background:transparent;color:var(--muted2);font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;font-weight:500;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:9px;margin-bottom:2px;position:relative}
 .sb-btn:hover{color:var(--text);background:rgba(255,255,255,.04)}
-.sb-btn.on{color:var(--amber);background:rgba(245,158,11,.1);font-weight:600}
+.sb-btn.on{color:var(--amber);background:rgba(245,158,11,.1);font-weight:600;border:1px solid rgba(245,158,11,.22)}
 .sb-btn.on::before{content:'';position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:3px;height:60%;background:var(--amber);border-radius:0 3px 3px 0}
 .sb-btn .ic{font-size:.9rem;width:18px;text-align:center;flex-shrink:0;opacity:.8}
 .sb-btn.on .ic{opacity:1}
@@ -407,6 +407,40 @@ select.fi{appearance:none;cursor:pointer}
   .mt-price{font-size:.76rem}
 }
 
+/* ===== TABULAR NUMBERS (professional finance feel) ===== */
+.st-val,.cart-tot,.ci-qn,.fmt-num,table.tbl td{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ===== BENTO GRID ===== */
+.bento{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+.bento .stat-tile:first-child .st-val{font-size:2.2rem;letter-spacing:-1.5px;line-height:1}
+.bento .stat-tile:first-child .st-lbl{font-size:.62rem;letter-spacing:1.5px}
+.bento .stat-tile:first-child .st-sub{margin-top:8px}
+@media(max-width:900px){.bento{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:600px){.bento{grid-template-columns:1fr 1fr}}
+
+/* ===== SIDEBAR COLLAPSED ===== */
+.sidebar.collapsed{width:60px;min-width:60px}
+.sidebar.collapsed .sb-brand .sb-logo small,.sidebar.collapsed .sb-store-name span:not(:first-child),.sidebar.collapsed .sb-uname,.sidebar.collapsed .sb-urole,.sidebar.collapsed .sb-btn span:not(.ic),.sidebar.collapsed .sb-sec,.sidebar.collapsed .sb-out span,.sidebar.collapsed .nav-badge,.sidebar.collapsed .prem-badge{display:none!important}
+.sidebar.collapsed .sb-btn{justify-content:center;padding:9px}
+.sidebar.collapsed .sb-btn .ic{width:auto;font-size:1rem;opacity:1}
+.sidebar.collapsed .sb-user{flex-direction:column;align-items:center;gap:4px;padding:10px 0}
+.sidebar.collapsed .sb-store{padding:8px 0;text-align:center}
+.sidebar.collapsed .sb-store-name{justify-content:center}
+.sidebar.collapsed .sb-foot{padding:8px 0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.sidebar.collapsed .sb-out{justify-content:center;padding:8px}
+.sidebar.collapsed .sb-out a{display:none}
+.sidebar.collapsed .sb-logo{font-size:.7rem;writing-mode:initial}
+.sidebar-toggle{position:absolute;right:-11px;top:72px;width:22px;height:22px;background:var(--bg3);border:1px solid var(--border2);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.65rem;color:var(--muted);z-index:10;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.sidebar-toggle:hover{background:var(--amber);color:#000;border-color:transparent}
+.sidebar.collapsed .sidebar-toggle{right:-11px}
+.main-area{transition:all .28s cubic-bezier(.4,0,.2,1)}
+
+/* ===== MINI SVG CHART ===== */
+.svg-chart{width:100%;overflow:hidden;margin-top:8px}
+.chart-bar-group{cursor:default}
+.chart-bar-group:hover .chart-bar-rect{opacity:.75}
+.chart-bar-group:hover .chart-bar-rect.active-bar{opacity:1;filter:brightness(1.15)}
+
 /* ===== PAGE HEADER ===== */
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap}
 .ph-l{flex:1;min-width:0}
@@ -592,6 +626,7 @@ select.fi{appearance:none;cursor:pointer}
 <div id="screen-app" class="screen">
   <div class="mob-overlay" id="mob-ov" onclick="closeSidebar()"></div>
   <aside class="sidebar" id="sidebar">
+    <div class="sidebar-toggle" onclick="toggleSidebarCollapse()" id="sb-toggle" title="Collapse sidebar">‹</div>
     <div class="sb-brand"><div class="sb-logo">KedaiKas<small>UMKM Nusantara</small></div></div>
     <div class="sb-store"><div class="sb-store-name"><span id="sb-store-ico">☕</span><span id="sb-store-name" style="font-weight:700">—</span><span class="prem-badge" id="prem-badge" style="display:none">⭐ PRO</span></div></div>
     <div class="sb-user">
@@ -707,7 +742,7 @@ select.fi{appearance:none;cursor:pointer}
     <div id="page-dashboard" class="page" style="display:none">
       <div class="content">
         <div id="db-welcome"></div>
-        <div class="g4" style="margin-bottom:18px" id="db-stats"></div>
+        <div class="bento" style="margin-bottom:18px" id="db-stats"></div>
         <div class="g2" style="margin-bottom:14px">
           <div class="card">
             <div class="card-t">📈 Tren Penjualan <span class="card-t-sub">7 hari terakhir</span></div>
@@ -2886,11 +2921,12 @@ document.addEventListener('keydown', e => {
 // ================================================================
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('mob-ov').classList.toggle('open');}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mob-ov').classList.remove('open');}
+function toggleSidebarCollapse(){const sb=document.getElementById('sidebar');const tog=document.getElementById('sb-toggle');const collapsed=sb.classList.toggle('collapsed');tog.textContent=collapsed?'›':'‹';try{localStorage.setItem('sb_collapsed',collapsed?'1':'');}catch(e){}}
 
 // ================================================================
 // INIT
 // ================================================================
-window.addEventListener('load', ()=>{ tryLoadApp(); });
+window.addEventListener('load', ()=>{ try{if(localStorage.getItem('sb_collapsed')){const sb=document.getElementById('sidebar');if(sb){sb.classList.add('collapsed');const tog=document.getElementById('sb-toggle');if(tog)tog.textContent='›';}}}catch(e){} tryLoadApp(); });
 
 async function tryLoadApp(isRetry=false) {
   const tid = localStorage.getItem('kk_toko_id');
