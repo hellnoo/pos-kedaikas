@@ -406,6 +406,37 @@ select.fi{appearance:none;cursor:pointer}
   .mt-name{font-size:.72rem}
   .mt-price{font-size:.76rem}
 }
+
+/* ===== PAGE HEADER ===== */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.ph-l{flex:1;min-width:0}
+.ph-t{font-family:'Sora',sans-serif;font-size:1.08rem;font-weight:800;letter-spacing:-.3px;margin-bottom:5px;color:var(--text)}
+.ph-s{font-size:.77rem;color:var(--muted2);line-height:1.6}
+.ph-r{display:flex;gap:8px;align-items:center;flex-shrink:0}
+
+/* ===== DASHBOARD WELCOME ===== */
+.dw{margin-bottom:20px;padding:16px 20px;background:linear-gradient(135deg,rgba(245,158,11,.06) 0%,rgba(245,158,11,.02) 100%);border:1px solid rgba(245,158,11,.18);border-radius:var(--r);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dw-lbl{font-size:.67rem;font-weight:700;color:var(--amber);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:5px}
+.dw-name{font-family:'Sora',sans-serif;font-size:1.15rem;font-weight:800;letter-spacing:-.3px;margin-bottom:3px}
+.dw-name em{color:var(--amber);font-style:normal}
+.dw-date{font-size:.73rem;color:var(--muted)}
+.dw-ico{font-size:2.4rem;flex-shrink:0;opacity:.75;line-height:1}
+
+/* ===== STAT TILE VARIANTS ===== */
+.st-green::before{background:linear-gradient(90deg,var(--green),transparent)!important}
+.st-green::after{background:radial-gradient(circle,rgba(16,185,129,.07) 0%,transparent 70%)!important}
+.st-blue::before{background:linear-gradient(90deg,var(--blue),transparent)!important}
+.st-blue::after{background:radial-gradient(circle,rgba(59,130,246,.07) 0%,transparent 70%)!important}
+.st-red::before{background:linear-gradient(90deg,var(--red),transparent)!important}
+.st-red::after{background:radial-gradient(circle,rgba(244,63,94,.07) 0%,transparent 70%)!important}
+
+/* ===== CARD TITLE VARIANTS ===== */
+.card-t-sub{font-size:.68rem;color:var(--muted);font-weight:400;margin-left:auto;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:0}
+
+/* ===== LAPORAN PAGE HEADER ===== */
+.lap-ph{margin-bottom:18px}
+.lap-ph-title{font-family:'Sora',sans-serif;font-size:1.08rem;font-weight:800;letter-spacing:-.3px;margin-bottom:4px}
+.lap-ph-sub{font-size:.77rem;color:var(--muted2)}
 </style>
 </head>
 <body>
@@ -562,10 +593,11 @@ select.fi{appearance:none;cursor:pointer}
   <div class="mob-overlay" id="mob-ov" onclick="closeSidebar()"></div>
   <aside class="sidebar" id="sidebar">
     <div class="sb-brand"><div class="sb-logo">KedaiKas<small>UMKM Nusantara</small></div></div>
-    <div class="sb-store"><div class="sb-store-name"><span id="sb-store-ico">☕</span><span id="sb-store-name">—</span><span class="prem-badge" id="prem-badge" style="display:none">⭐ PRO</span></div></div>
+    <div class="sb-store"><div class="sb-store-name"><span id="sb-store-ico">☕</span><span id="sb-store-name" style="font-weight:700">—</span><span class="prem-badge" id="prem-badge" style="display:none">⭐ PRO</span></div></div>
     <div class="sb-user">
       <div class="sb-avatar" id="sb-av">?</div>
-      <div><div class="sb-uname" id="sb-uname">—</div><div class="sb-urole" id="sb-urole">—</div></div>
+      <div style="flex:1;min-width:0"><div class="sb-uname" id="sb-uname">—</div><div class="sb-urole" id="sb-urole">—</div></div>
+      <div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green);margin-left:2px" title="Online"></div>
     </div>
     <nav class="sb-nav">
       <button class="sb-btn on" data-p="pos" onclick="goPage('pos',this)"><span class="ic">🛒</span> Kasir / POS<span class="nav-badge" id="cart-badge" style="background:var(--amber);color:#000"></span></button>
@@ -674,13 +706,20 @@ select.fi{appearance:none;cursor:pointer}
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page" style="display:none">
       <div class="content">
+        <div id="db-welcome"></div>
         <div class="g4" style="margin-bottom:18px" id="db-stats"></div>
         <div class="g2" style="margin-bottom:14px">
-          <div class="card"><div class="card-t">Penjualan 7 Hari</div><div id="db-chart"></div></div>
-          <div class="card"><div class="card-t">Menu Terlaris Hari Ini</div><div id="db-terlaris"></div></div>
+          <div class="card">
+            <div class="card-t">📈 Tren Penjualan <span class="card-t-sub">7 hari terakhir</span></div>
+            <div id="db-chart"></div>
+          </div>
+          <div class="card">
+            <div class="card-t">🏆 Menu Terlaris <span class="card-t-sub">Hari ini</span></div>
+            <div id="db-terlaris"></div>
+          </div>
         </div>
         <div class="card">
-          <div class="card-t">Transaksi Terbaru</div>
+          <div class="card-t">🧾 Transaksi Terbaru <span class="card-t-sub">8 terakhir</span></div>
           <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Waktu</th><th>Item</th><th>Total</th><th>Bayar</th><th>Kasir</th><th></th></tr></thead><tbody id="db-tx"></tbody></table></div>
         </div>
       </div>
@@ -689,6 +728,15 @@ select.fi{appearance:none;cursor:pointer}
     <!-- LAPORAN -->
     <div id="page-laporan" class="page" style="display:none">
       <div class="content">
+        <div class="ph" style="margin-bottom:16px">
+          <div class="ph-l">
+            <div class="ph-t">📈 Laporan Penjualan</div>
+            <div class="ph-s">Analisis omzet, laba, dan tren transaksi toko</div>
+          </div>
+          <div class="ph-r">
+            <button class="btn btn-ghost" onclick="exportCSV()">⬇️ Export CSV</button>
+          </div>
+        </div>
         <div class="lap-tabs">
           <button class="lap-tab on" onclick="lapTab('harian',this)">Harian</button>
           <button class="lap-tab" onclick="lapTab('mingguan',this)">Mingguan</button>
@@ -697,7 +745,6 @@ select.fi{appearance:none;cursor:pointer}
         <div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <input class="fi" type="date" id="lap-date" style="width:auto" onchange="renderLaporan()">
           <input class="fi" type="month" id="lap-month" style="width:auto;display:none" onchange="renderLaporan()">
-          <button class="btn btn-ghost" onclick="exportCSV()" style="margin-left:auto">⬇️ Export CSV</button>
         </div>
         <div class="lap-filter">
           <select class="fi" id="lap-filter-kasir" onchange="renderLaporan()">
@@ -729,9 +776,14 @@ select.fi{appearance:none;cursor:pointer}
     <!-- MENU -->
     <div id="page-menu" class="page" style="display:none">
       <div class="content">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-          <span style="font-size:.82rem;color:var(--muted)">Kelola item menu dan harga</span>
-          <button class="btn btn-amber" onclick="openMenuModal()">+ Tambah Menu</button>
+        <div class="ph">
+          <div class="ph-l">
+            <div class="ph-t">🍽️ Kelola Menu</div>
+            <div class="ph-s">Atur item, harga, kategori, dan ketersediaan menu</div>
+          </div>
+          <div class="ph-r">
+            <button class="btn btn-amber" onclick="openMenuModal()">+ Tambah Menu</button>
+          </div>
         </div>
         <div class="card"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Menu</th><th>Kategori</th><th>Harga Jual</th><th>HPP</th><th>Margin</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="menu-tbl"></tbody></table></div></div>
       </div>
@@ -740,9 +792,12 @@ select.fi{appearance:none;cursor:pointer}
     <!-- STOK -->
     <div id="page-stok" class="page" style="display:none">
       <div class="content">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-          <span style="font-size:.82rem;color:var(--muted)">Stok bahan baku</span>
-          <div style="display:flex;gap:8px">
+        <div class="ph">
+          <div class="ph-l">
+            <div class="ph-t">📦 Stok Bahan</div>
+            <div class="ph-s">Monitor bahan baku dan riwayat perubahan stok</div>
+          </div>
+          <div class="ph-r">
             <button class="btn btn-ghost" onclick="openRestockModal()">📦 Restock</button>
             <button class="btn btn-amber" onclick="openStokModal()">+ Tambah Bahan</button>
           </div>
@@ -759,7 +814,12 @@ select.fi{appearance:none;cursor:pointer}
     <!-- RESEP -->
     <div id="page-resep" class="page" style="display:none">
       <div class="content">
-        <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Atur bahan baku per menu. Stok otomatis berkurang saat transaksi.</p>
+        <div class="ph">
+          <div class="ph-l">
+            <div class="ph-t">📋 Resep Menu</div>
+            <div class="ph-s">Atur bahan baku per porsi — stok otomatis berkurang saat ada transaksi</div>
+          </div>
+        </div>
         <div id="resep-list"></div>
       </div>
     </div>
@@ -767,9 +827,14 @@ select.fi{appearance:none;cursor:pointer}
     <!-- PENGGUNA -->
     <div id="page-pengguna" class="page" style="display:none">
       <div class="content">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-          <span style="font-size:.82rem;color:var(--muted)">Kasir login pakai PIN 4 digit</span>
-          <button class="btn btn-amber" onclick="openUserModal()">+ Tambah Kasir</button>
+        <div class="ph">
+          <div class="ph-l">
+            <div class="ph-t">👥 Pengguna</div>
+            <div class="ph-s">Kelola kasir dan owner — login pakai PIN 4 digit</div>
+          </div>
+          <div class="ph-r">
+            <button class="btn btn-amber" onclick="openUserModal()">+ Tambah Kasir</button>
+          </div>
         </div>
         <div class="card"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Nama</th><th>Role</th><th>Aksi</th></tr></thead><tbody id="user-tbl"></tbody></table></div></div>
       </div>
@@ -778,6 +843,12 @@ select.fi{appearance:none;cursor:pointer}
     <!-- SETTINGS -->
     <div id="page-settings" class="page" style="display:none">
       <div class="content" style="max-width:600px">
+        <div class="ph" style="margin-bottom:24px">
+          <div class="ph-l">
+            <div class="ph-t">⚙️ Pengaturan Toko</div>
+            <div class="ph-s">Kelola informasi, QRIS, pajak, dan preferensi toko</div>
+          </div>
+        </div>
         <div class="set-section">
           <div class="set-section-title">🏪 Informasi Toko</div>
           <div class="g2">
@@ -2005,11 +2076,35 @@ function renderDashboard() {
   const ydRev=ydTx.reduce((s,t)=>s+t.total,0);
   const g=ydRev?(((rev-ydRev)/ydRev)*100).toFixed(1):null;
 
+  // Welcome section
+  const hr=new Date().getHours();
+  const gr=hr<11?'Selamat pagi ☀️':hr<15?'Selamat siang 🌤️':hr<18?'Selamat sore 🌅':'Selamat malam 🌙';
+  const dwEl=document.getElementById('db-welcome');
+  if(dwEl)dwEl.innerHTML=`<div class="dw"><div><div class="dw-lbl">${gr}</div><div class="dw-name">Hai, <em>${esc(S.currentUser.nama)}</em>!</div><div class="dw-date">${new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div></div><div class="dw-ico">${esc(S.toko.logo_emoji||'☕')}</div></div>`;
+
+  const kritis=S.bahan.filter(b=>b.stok<=b.min_stok).length;
+  const avgTx=todayTx.length?Math.round(rev/todayTx.length):0;
   document.getElementById('db-stats').innerHTML=`
-    <div class="stat-tile"><div class="st-ico">💰</div><div class="st-val">${fmt(rev)}</div><div class="st-lbl">Omzet Hari Ini</div>${g!==null?`<div class="st-sub ${g>=0?'st-up':'st-dn'}">${g>=0?'↑':'↓'} ${Math.abs(g)}% vs kemarin</div>`:''}</div>
-    <div class="stat-tile"><div class="st-ico">📈</div><div class="st-val">${fmt(profit)}</div><div class="st-lbl">Laba Hari Ini</div><div class="st-sub" style="color:var(--muted)">Margin ${rev?((profit/rev)*100).toFixed(1):0}%</div></div>
-    <div class="stat-tile"><div class="st-ico">🧾</div><div class="st-val">${todayTx.length}</div><div class="st-lbl">Transaksi</div></div>
-    <div class="stat-tile"><div class="st-ico">⚠️</div><div class="st-val" style="color:var(--red)">${S.bahan.filter(b=>b.stok<=b.min_stok).length}</div><div class="st-lbl">Stok Kritis</div></div>
+    <div class="stat-tile">
+      <div class="st-lbl">Omzet Hari Ini</div>
+      <div class="st-val amber">${fmt(rev)}</div>
+      ${g!==null?`<div class="st-sub ${+g>=0?'st-up':'st-dn'}">${+g>=0?'↑':'↓'} ${Math.abs(+g)}% vs kemarin</div>`:`<div class="st-sub" style="color:var(--muted)">Hari pertama</div>`}
+    </div>
+    <div class="stat-tile st-green">
+      <div class="st-lbl">Laba Bersih</div>
+      <div class="st-val green">${fmt(profit)}</div>
+      <div class="st-sub" style="color:var(--muted)">Margin ${rev?((profit/rev)*100).toFixed(1):0}%</div>
+    </div>
+    <div class="stat-tile st-blue">
+      <div class="st-lbl">Transaksi</div>
+      <div class="st-val" style="color:var(--blue)">${todayTx.length}</div>
+      <div class="st-sub" style="color:var(--muted)">${avgTx?'Rata-rata '+fmt(avgTx):'Belum ada'}</div>
+    </div>
+    <div class="stat-tile ${kritis>0?'st-red':''}">
+      <div class="st-lbl">Stok Kritis</div>
+      <div class="st-val ${kritis>0?'red':''}">${kritis}</div>
+      <div class="st-sub" style="color:${kritis>0?'var(--red)':'var(--muted)'}">${kritis>0?kritis+' item perlu restock':'Semua stok aman ✓'}</div>
+    </div>
   `;
 
   const days=[];
@@ -2063,10 +2158,25 @@ function renderLaporan() {
   const margin=rev?((profit/rev)*100).toFixed(1):0;
 
   document.getElementById('lap-stats').innerHTML=`
-    <div class="stat-tile"><div class="st-ico">💰</div><div class="st-val">${fmt(rev)}</div><div class="st-lbl">Total Omzet</div></div>
-    <div class="stat-tile"><div class="st-ico">📦</div><div class="st-val">${fmt(hpp)}</div><div class="st-lbl">Total HPP</div></div>
-    <div class="stat-tile"><div class="st-ico">📈</div><div class="st-val" style="color:var(--green)">${fmt(profit)}</div><div class="st-lbl">Laba Bersih</div></div>
-    <div class="stat-tile"><div class="st-ico">🧾</div><div class="st-val">${txs.length}</div><div class="st-lbl">Transaksi</div><div class="st-sub" style="color:var(--muted)">Margin ${margin}%</div></div>
+    <div class="stat-tile">
+      <div class="st-lbl">Total Omzet</div>
+      <div class="st-val amber">${fmt(rev)}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="st-lbl">Total HPP</div>
+      <div class="st-val">${fmt(hpp)}</div>
+      <div class="st-sub" style="color:var(--muted)">Biaya produksi</div>
+    </div>
+    <div class="stat-tile st-green">
+      <div class="st-lbl">Laba Bersih</div>
+      <div class="st-val green">${fmt(profit)}</div>
+      <div class="st-sub" style="color:var(--muted)">Margin ${margin}%</div>
+    </div>
+    <div class="stat-tile st-blue">
+      <div class="st-lbl">Transaksi</div>
+      <div class="st-val" style="color:var(--blue)">${txs.length}</div>
+      <div class="st-sub" style="color:var(--muted)">${txs.length?'Rata-rata '+fmt(Math.round(rev/(txs.length||1))):'—'}</div>
+    </div>
   `;
 
   document.getElementById('lap-profit').innerHTML=`
@@ -2106,9 +2216,17 @@ function renderLaporan() {
 // ================================================================
 function renderMenuPage() {
   document.getElementById('menu-tbl').innerHTML=S.menu.map(m=>{
-    const mg=m.harga?(((m.harga-m.hpp)/m.harga)*100).toFixed(0):0;
-    return `<tr><td><span style="margin-right:7px">${esc(m.icon||'🍽️')}</span><strong>${esc(m.nama)}</strong></td><td><span class="badge badge-amber">${esc(m.kategori)}</span></td><td style="color:var(--amber);font-weight:700">${fmt(m.harga)}</td><td style="color:var(--muted)">${fmt(m.hpp||0)}</td><td><span class="badge ${mg>=40?'badge-green':mg>=20?'badge-amber':'badge-red'}">${mg}%</span></td><td><span class="badge ${m.status==='aktif'?'badge-green':'badge-red'}">${esc(m.status)}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openMenuModal('${m.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteMenu('${m.id}')">Hapus</button></td></tr>`;
-  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Belum ada menu</td></tr>';
+    const mg=m.harga?(((m.harga-(m.hpp||0))/m.harga)*100).toFixed(0):0;
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:9px"><span style="font-size:1.3rem;line-height:1">${esc(m.icon||'🍽️')}</span><div><div style="font-weight:600;font-size:.84rem">${esc(m.nama)}</div></div></div></td>
+      <td><span class="badge badge-amber">${esc(m.kategori||'—')}</span></td>
+      <td><span style="font-family:'Sora',sans-serif;font-weight:700;color:var(--amber)">${fmt(m.harga)}</span></td>
+      <td><span style="color:var(--muted);font-size:.82rem">${fmt(m.hpp||0)}</span></td>
+      <td><span class="badge ${+mg>=40?'badge-green':+mg>=20?'badge-amber':'badge-red'}">${mg}%</span></td>
+      <td><span class="badge ${m.status==='aktif'?'badge-green':'badge-red'}">${m.status==='aktif'?'Aktif':'Non-aktif'}</span></td>
+      <td><div style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openMenuModal('${m.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteMenu('${m.id}')">Hapus</button></div></td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="7"><div class="empty"><span class="empty-ico">🍽️</span><div class="empty-title">Belum ada menu</div><p>Tambah item pertama kamu</p></div></td></tr>`;
 }
 
 function openMenuModal(id) {
@@ -2170,8 +2288,17 @@ function renderStokPage() {
     const pct=b.min_stok?(b.stok/b.min_stok*100):100;
     const st=pct<=0?'badge-red':pct<=100?'badge-amber':'badge-green';
     const stxt=pct<=0?'Habis':pct<=100?'Kritis':'Aman';
-    return `<tr><td><strong>${esc(b.nama)}</strong></td><td style="color:var(--muted)">${esc(b.satuan)}</td><td style="font-weight:700">${b.stok.toLocaleString('id-ID')}</td><td style="color:var(--muted)">${b.min_stok}</td><td style="color:var(--muted)">${fmt(b.harga_satuan)}/${b.satuan}</td><td><span class="badge ${st}">${stxt}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button></td></tr>`;
-  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Belum ada bahan</td></tr>';
+    const stokColor=pct<=0?'var(--red)':pct<=100?'var(--amber)':'var(--text)';
+    return `<tr>
+      <td><div style="font-weight:600;font-size:.84rem">${esc(b.nama)}</div></td>
+      <td><span class="badge badge-blue" style="font-size:.62rem">${esc(b.satuan)}</span></td>
+      <td><span style="font-family:'Sora',sans-serif;font-weight:700;color:${stokColor}">${b.stok.toLocaleString('id-ID')}</span></td>
+      <td><span style="color:var(--muted);font-size:.82rem">${b.min_stok}</span></td>
+      <td><span style="color:var(--muted);font-size:.82rem">${fmt(b.harga_satuan||0)}/${esc(b.satuan)}</span></td>
+      <td><span class="badge ${st}">${stxt}</span></td>
+      <td><div style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button></div></td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="7"><div class="empty"><span class="empty-ico">📦</span><div class="empty-title">Belum ada bahan</div><p>Tambah bahan baku pertama</p></div></td></tr>`;
   renderStokLog();
 }
 
@@ -2246,15 +2373,22 @@ async function saveRestock() {
 // RESEP
 // ================================================================
 function renderResepPage() {
-  document.getElementById('resep-list').innerHTML=S.menu.filter(m=>m.status==='aktif').map(m=>{
+  const aktif=S.menu.filter(m=>m.status==='aktif');
+  document.getElementById('resep-list').innerHTML=aktif.map(m=>{
     const ings=S.resep.filter(r=>r.menu_id===m.id);
-    const ingText=ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?`${esc(b.nama)} ${r.qty} ${esc(b.satuan)}`:'?';}).join(', ');
-    return `<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px">
-      <div style="font-size:1.7rem;flex-shrink:0">${esc(m.icon||'🍽️')}</div>
-      <div style="flex:1"><div style="font-weight:700;margin-bottom:3px">${esc(m.nama)}</div><div style="font-size:.75rem;color:var(--muted)">${ingText||'Belum ada resep'}</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="openResepModal('${m.id}')">Edit</button>
+    const ingText=ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?`<span class="badge badge-blue" style="font-size:.62rem;margin-right:3px">${esc(b.nama)} ${r.qty}${esc(b.satuan)}</span>`:'';}).join('');
+    const hasResep=ings.length>0;
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:42px;height:42px;border-radius:12px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">${esc(m.icon||'🍽️')}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.88rem;margin-bottom:5px">${esc(m.nama)}</div>
+          <div>${hasResep?ingText:`<span style="font-size:.73rem;color:var(--muted)">Belum ada resep — stok tidak akan dikurangi</span>`}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openResepModal('${m.id}')">${hasResep?'Edit':'+ Resep'}</button>
+      </div>
     </div>`;
-  }).join('')||'<div class="empty"><div class="empty-ico">📋</div><p>Tidak ada menu aktif</p></div>';
+  }).join('')||`<div class="empty"><span class="empty-ico">📋</span><div class="empty-title">Tidak ada menu aktif</div><p>Aktifkan menu di halaman Kelola Menu</p></div>`;
 }
 
 function openResepModal(menuId) {
@@ -2317,8 +2451,16 @@ async function saveResep() {
 // PENGGUNA
 // ================================================================
 function renderUserPage() {
-  document.getElementById('user-tbl').innerHTML=S.pengguna.filter(u=>u&&u.id).map(u=>`
-    <tr><td><strong>${esc(u.nama)}</strong></td><td><span class="badge ${u.role==='owner'?'badge-purple':'badge-blue'}">${u.role==='owner'?'👑 Owner':'🧾 Kasir'}</span></td><td style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openUserModal('${u.id}')">Edit</button>${S.currentUser.id!==u.id?`<button class="btn btn-sm btn-red" onclick="deleteUser('${u.id}')">Hapus</button>`:''}</td></tr>`).join('');
+  const rows=S.pengguna.filter(u=>u&&u.id).map(u=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:9px;background:${u.role==='owner'?'linear-gradient(135deg,#7c3aed,#8b5cf6)':'linear-gradient(135deg,var(--amber-d),var(--amber))'};display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#fff;flex-shrink:0">${esc(u.nama[0]?.toUpperCase()||'?')}</div>
+        <div><div style="font-weight:600;font-size:.85rem">${esc(u.nama)}</div><div style="font-size:.68rem;color:var(--muted);margin-top:1px">${u.id===S.currentUser.id?'Kamu — sedang aktif':'—'}</div></div>
+      </div></td>
+      <td><span class="badge ${u.role==='owner'?'badge-purple':'badge-blue'}">${u.role==='owner'?'👑 Owner':'🧾 Kasir'}</span></td>
+      <td><div style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openUserModal('${u.id}')">Edit</button>${S.currentUser.id!==u.id?`<button class="btn btn-sm btn-red" onclick="deleteUser('${u.id}')">Hapus</button>`:''}</div></td>
+    </tr>`).join('');
+  document.getElementById('user-tbl').innerHTML=rows||`<tr><td colspan="3"><div class="empty"><span class="empty-ico">👥</span><div class="empty-title">Belum ada pengguna</div></div></td></tr>`;
 }
 
 function openUserModal(id) {
