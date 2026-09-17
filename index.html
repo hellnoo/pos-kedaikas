@@ -755,13 +755,7 @@ button{touch-action:manipulation}
           </div>
           <div class="cash-wrap" id="cash-wrap">
             <input class="fi" type="number" id="cash-in" placeholder="Uang diterima" oninput="calcChange()">
-            <div class="quick-btns" id="quick-cash-btns">
-              <button class="qb" onclick="setQuickCash('pas')">Uang Pas</button>
-              <button class="qb" onclick="setQuickCash(50000)">50k</button>
-              <button class="qb" onclick="setQuickCash(100000)">100k</button>
-              <button class="qb" onclick="setQuickCash(150000)">150k</button>
-              <button class="qb" onclick="setQuickCash(200000)">200k</button>
-            </div>
+            <div class="quick-btns" id="quick-cash-btns"></div>
             <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-top:4px;color:var(--muted)">
               <span>Kembalian</span><span id="change-disp" style="color:var(--green);font-weight:700">Rp 0</span>
             </div>
@@ -2199,6 +2193,17 @@ function calcChange() {
   document.getElementById('change-disp').textContent=chg>=0?fmt(chg):'—';
   document.getElementById('change-disp').style.color=chg>=0?'var(--green)':'var(--red)';
   document.getElementById('co-btn').disabled=!S.cart.length||(S.payMethod==='cash'&&cash<tot);
+  // Dynamic quick-cash buttons
+  const qcEl=document.getElementById('quick-cash-btns');
+  if(qcEl && tot>0) {
+    const rnd=(v,d)=>Math.ceil(v/d)*d;
+    const opts=[tot];
+    for(const s of [1000,2000,5000,10000,20000,50000,100000]){const v=rnd(tot,s);if(v!==tot&&v-tot<=200000)opts.push(v);}
+    const uniq=[...new Set(opts)].sort((a,b)=>a-b).slice(0,5);
+    qcEl.innerHTML=uniq.map(v=>`<button class="qb" onclick="setQuickCash(${v})">${v===tot?'Uang Pas':v>=1000?(v/1000%1===0?v/1000+'k':fmt(v)):fmt(v)}</button>`).join('');
+  } else if(qcEl) {
+    qcEl.innerHTML='<button class="qb" onclick="setQuickCash(\'pas\')">Uang Pas</button>';
+  }
 }
 
 async function processCheckout(fromQRISConfirm=false) {
