@@ -170,6 +170,7 @@ select.fi{appearance:none;cursor:pointer}
 .badge-red{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.2)}
 .badge-blue{background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
 .badge-purple{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.2)}
+.badge-muted{background:rgba(255,255,255,.04);color:var(--muted2);border:1px solid var(--border)}
 
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:800;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px)}
 .overlay.open{display:flex}
@@ -194,7 +195,13 @@ select.fi{appearance:none;cursor:pointer}
 
 .empty{text-align:center;padding:44px 20px;color:var(--muted)}
 .empty-ico{font-size:2.5rem;margin-bottom:10px;opacity:.6}
+.empty-title{font-family:'Sora',sans-serif;font-size:.9rem;font-weight:700;color:var(--muted2);margin-bottom:4px}
 .alert-amber{padding:11px 15px;border-radius:var(--rs);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--amber-l);font-size:.8rem;margin-bottom:14px}
+.alert-red{padding:11px 15px;border-radius:var(--rs);background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.2);color:var(--red);font-size:.8rem;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* STOK PROGRESS BAR */
+.stok-bar-wrap{width:100%;height:4px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;margin-top:4px;min-width:60px}
+.stok-bar-fill{height:100%;border-radius:99px;transition:width .4s}
 
 /* ===== POS ===== */
 .pos-left{flex:1;overflow-y:auto;padding:16px;background:var(--bg)}
@@ -411,12 +418,13 @@ select.fi{appearance:none;cursor:pointer}
 .st-val,.cart-tot,.ci-qn,.fmt-num,table.tbl td{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 
 /* ===== BENTO GRID ===== */
-.bento{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
-.bento .stat-tile:first-child .st-val{font-size:2.2rem;letter-spacing:-1.5px;line-height:1}
+.bento{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.bento .stat-tile:first-child{grid-column:span 2}
+.bento .stat-tile:first-child .st-val{font-size:2rem;letter-spacing:-1.5px;line-height:1}
 .bento .stat-tile:first-child .st-lbl{font-size:.62rem;letter-spacing:1.5px}
 .bento .stat-tile:first-child .st-sub{margin-top:8px}
-@media(max-width:900px){.bento{grid-template-columns:1fr 1fr 1fr}}
-@media(max-width:600px){.bento{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.bento{grid-template-columns:1fr 1fr}.bento .stat-tile:first-child{grid-column:span 2}}
+@media(max-width:600px){.bento{grid-template-columns:1fr 1fr}.bento .stat-tile:first-child{grid-column:span 2}}
 
 /* ===== SIDEBAR COLLAPSED ===== */
 .sidebar.collapsed{width:60px;min-width:60px}
@@ -471,6 +479,32 @@ select.fi{appearance:none;cursor:pointer}
 .lap-ph{margin-bottom:18px}
 .lap-ph-title{font-family:'Sora',sans-serif;font-size:1.08rem;font-weight:800;letter-spacing:-.3px;margin-bottom:4px}
 .lap-ph-sub{font-size:.77rem;color:var(--muted2)}
+
+/* ===== TABLE IMPROVEMENTS ===== */
+table.tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.008)}
+table.tbl tbody tr:hover td{background:rgba(245,158,11,.04)!important;transition:background .1s}
+
+/* ===== RESEP CARD ===== */
+.resep-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:8px;display:flex;align-items:center;gap:14px;transition:border-color .18s}
+.resep-card:hover{border-color:var(--border2)}
+.resep-card-ico{width:44px;height:44px;border-radius:12px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+
+/* ===== SETTINGS SECTION ICON ===== */
+.set-section-title .set-ico{font-size:1rem;opacity:.85}
+
+/* ===== INFO ROW IMPROVED ===== */
+.ir-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:2px 0;margin-bottom:0}
+.ir-card .ir{padding:10px 14px}
+
+/* ===== TOPBAR ANIMATION ===== */
+.topbar-title{transition:all .18s}
+
+/* ===== PRINT HIDE ===== */
+@media print{
+  .sidebar,.topbar,.modal-ft,button:not(.co-btn),.hamburger,#toast,#loading-overlay,#notif-payment,.notif-overlay-bg{display:none!important}
+  .struk{max-width:none;margin:0;padding:10px;box-shadow:none}
+  body{background:#fff}
+}
 </style>
 </head>
 <body>
@@ -791,7 +825,7 @@ select.fi{appearance:none;cursor:pointer}
             <option value="qris">QRIS</option>
           </select>
         </div>
-        <div class="g4" style="margin-bottom:16px" id="lap-stats"></div>
+        <div class="bento" style="margin-bottom:16px" id="lap-stats"></div>
         <div class="g2" style="margin-bottom:14px">
           <div class="card"><div class="card-t">Ringkasan Laba</div><div id="lap-profit"></div></div>
           <div class="card"><div class="card-t">Menu Terjual</div><div id="lap-chart"></div></div>
@@ -819,6 +853,17 @@ select.fi{appearance:none;cursor:pointer}
           <div class="ph-r">
             <button class="btn btn-amber" onclick="openMenuModal()">+ Tambah Menu</button>
           </div>
+        </div>
+        <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <input class="fi" id="menu-search" placeholder="🔍 Cari menu..." oninput="renderMenuPage()" style="flex:1;min-width:180px;font-size:.83rem">
+          <select class="fi" id="menu-filter-kat" onchange="renderMenuPage()" style="width:auto;font-size:.8rem">
+            <option value="">Semua Kategori</option>
+          </select>
+          <select class="fi" id="menu-filter-status" onchange="renderMenuPage()" style="width:auto;font-size:.8rem">
+            <option value="">Semua Status</option>
+            <option value="aktif">Aktif</option>
+            <option value="nonaktif">Non-Aktif</option>
+          </select>
         </div>
         <div class="card"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Menu</th><th>Kategori</th><th>Harga Jual</th><th>HPP</th><th>Margin</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="menu-tbl"></tbody></table></div></div>
       </div>
@@ -2143,14 +2188,34 @@ function renderDashboard() {
   `;
 
   const days=[];
-  for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const di=d.toISOString().slice(0,10);const r=S.transaksi.filter(t=>t.tanggal===di).reduce((s,t)=>s+t.total,0);days.push({lbl:d.toLocaleDateString('id-ID',{weekday:'short'}),r});}
+  for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const di=d.toISOString().slice(0,10);const r=S.transaksi.filter(t=>t.tanggal===di).reduce((s,t)=>s+t.total,0);days.push({lbl:d.toLocaleDateString('id-ID',{weekday:'short'}),iso:di,r});}
   const mx=Math.max(...days.map(d=>d.r),1);
-  document.getElementById('db-chart').innerHTML=`<div class="chart-wrap">${days.map(d=>`<div class="cb-row"><span class="cb-lbl">${d.lbl}</span><div class="cb-bg"><div class="cb-fill" style="width:${d.r/mx*100}%"></div></div><span class="cb-val">${d.r?fmt(d.r).replace('Rp ',''):'-'}</span></div>`).join('')}</div>`;
+  const isoToday=todayISO();
+  // SVG vertical bar chart
+  const svgW=480,svgH=100,gap=8;const barW=Math.floor((svgW-gap*6)/7);
+  const barsHtml=days.map((d,i)=>{
+    const bh=Math.max(2,Math.round(d.r/mx*svgH));
+    const x=i*(barW+gap);
+    const isT=d.iso===isoToday;
+    const valLbl=d.r>=1000?(d.r>=1000000?(d.r/1000000).toFixed(1)+'jt':(d.r/1000).toFixed(0)+'k'):'';
+    return `<g>
+      <rect x="${x}" y="${svgH-bh}" width="${barW}" height="${bh}" rx="4" fill="${isT?'url(#bg)':'rgba(255,255,255,.07)'}"/>
+      ${valLbl&&isT?`<text x="${x+barW/2}" y="${svgH-bh-5}" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="700" font-family="'Sora'">${valLbl}</text>`:''}
+      ${valLbl&&!isT?`<text x="${x+barW/2}" y="${svgH-bh-5}" text-anchor="middle" fill="#4a5070" font-size="9" font-family="'Sora'">${valLbl}</text>`:''}
+      <text x="${x+barW/2}" y="${svgH+14}" text-anchor="middle" fill="${isT?'#f59e0b':'#4a5070'}" font-size="10" font-weight="${isT?'700':'400'}" font-family="'Plus Jakarta Sans'">${d.lbl}</text>
+    </g>`;
+  }).join('');
+  document.getElementById('db-chart').innerHTML=`<svg viewBox="0 0 ${svgW} ${svgH+20}" width="100%" style="overflow:visible;margin-top:8px"><defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f59e0b" stop-opacity=".95"/><stop offset="100%" stop-color="#d97706" stop-opacity=".4"/></linearGradient></defs>${barsHtml}</svg>`;
 
   const ic={};todayTx.forEach(t=>t.items.forEach(i=>{ic[i.nama]=(ic[i.nama]||0)+i.qty;}));
   const top=Object.entries(ic).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  const mq=Math.max(...top.map(x=>x[1]),1);
-  document.getElementById('db-terlaris').innerHTML=top.length?`<div class="chart-wrap">${top.map(([n,q])=>`<div class="cb-row"><span class="cb-lbl">${n}</span><div class="cb-bg"><div class="cb-fill" style="width:${q/mq*100}%;background:var(--green)"></div></div><span class="cb-val">${q} pcs</span></div>`).join('')}</div>`:'<div class="empty"><p>Belum ada data</p></div>';
+  const rankIco=['🥇','🥈','🥉','4️⃣','5️⃣'];
+  document.getElementById('db-terlaris').innerHTML=top.length?top.map(([n,q],i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)${i===top.length-1?';border:none':''}">
+      <span style="font-size:1rem;width:20px;text-align:center;flex-shrink:0">${rankIco[i]||i+1}</span>
+      <span style="flex:1;font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n)}</span>
+      <span style="font-family:'Sora',sans-serif;font-size:.82rem;font-weight:700;color:var(--green)">${q} pcs</span>
+    </div>`).join(''):'<div class="empty" style="padding:24px 0"><p style="font-size:.8rem">Belum ada transaksi hari ini</p></div>';
 
   const recent=[...S.transaksi].slice(0,8);
   document.getElementById('db-tx').innerHTML=recent.length?recent.map(t=>`<tr><td style="white-space:nowrap">${t.tanggal}<br><span style="color:var(--muted);font-size:.7rem">${t.waktu||''}</span></td><td style="font-size:.76rem">${t.items.map(i=>i.nama+(i.qty>1?'×'+i.qty:'')).join(', ')}</td><td style="color:var(--amber);font-weight:700">${fmt(t.total)}</td><td><span class="badge ${t.pembayaran==='cash'?'badge-green':'badge-blue'}">${t.pembayaran}</span></td><td style="color:var(--muted);font-size:.76rem">${t.kasir_nama}</td><td><button class="btn btn-sm btn-ghost" onclick="showReprintStruk('${t.id}')" title="Cetak ulang">🖨️</button></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Belum ada transaksi</td></tr>';
@@ -2196,10 +2261,11 @@ function renderLaporan() {
     <div class="stat-tile">
       <div class="st-lbl">Total Omzet</div>
       <div class="st-val amber">${fmt(rev)}</div>
+      <div class="st-sub" style="color:var(--muted)">${txs.length} transaksi</div>
     </div>
     <div class="stat-tile">
       <div class="st-lbl">Total HPP</div>
-      <div class="st-val">${fmt(hpp)}</div>
+      <div class="st-val" style="color:var(--red)">${fmt(hpp)}</div>
       <div class="st-sub" style="color:var(--muted)">Biaya produksi</div>
     </div>
     <div class="stat-tile st-green">
@@ -2208,9 +2274,9 @@ function renderLaporan() {
       <div class="st-sub" style="color:var(--muted)">Margin ${margin}%</div>
     </div>
     <div class="stat-tile st-blue">
-      <div class="st-lbl">Transaksi</div>
-      <div class="st-val" style="color:var(--blue)">${txs.length}</div>
-      <div class="st-sub" style="color:var(--muted)">${txs.length?'Rata-rata '+fmt(Math.round(rev/(txs.length||1))):'—'}</div>
+      <div class="st-lbl">Rata-rata Transaksi</div>
+      <div class="st-val" style="color:var(--blue)">${fmt(Math.round(rev/(txs.length||1)))}</div>
+      <div class="st-sub" style="color:var(--muted)">${txs.length} transaksi</div>
     </div>
   `;
 
@@ -2250,18 +2316,38 @@ function renderLaporan() {
 // MENU
 // ================================================================
 function renderMenuPage() {
-  document.getElementById('menu-tbl').innerHTML=S.menu.map(m=>{
+  // Populate category filter
+  const katSel = document.getElementById('menu-filter-kat');
+  if (katSel) {
+    const prevKat = katSel.value;
+    const cats = [...new Set(S.menu.map(m=>m.kategori).filter(Boolean))].sort();
+    katSel.innerHTML = '<option value="">Semua Kategori</option>' + cats.map(c=>`<option value="${c}" ${c===prevKat?'selected':''}>${c}</option>`).join('');
+  }
+  const q = (document.getElementById('menu-search')?.value||'').toLowerCase();
+  const fKat = document.getElementById('menu-filter-kat')?.value||'';
+  const fSt = document.getElementById('menu-filter-status')?.value||'';
+  let list = S.menu;
+  if (q) list = list.filter(m=>m.nama.toLowerCase().includes(q)||(m.kategori||'').toLowerCase().includes(q));
+  if (fKat) list = list.filter(m=>m.kategori===fKat);
+  if (fSt) list = list.filter(m=>m.status===fSt);
+  document.getElementById('menu-tbl').innerHTML=list.map(m=>{
     const mg=m.harga?(((m.harga-(m.hpp||0))/m.harga)*100).toFixed(0):0;
     return `<tr>
-      <td><div style="display:flex;align-items:center;gap:9px"><span style="font-size:1.3rem;line-height:1">${esc(m.icon||'🍽️')}</span><div><div style="font-weight:600;font-size:.84rem">${esc(m.nama)}</div></div></div></td>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${esc(m.icon||'🍽️')}</div>
+        <div><div style="font-weight:600;font-size:.84rem">${esc(m.nama)}</div></div>
+      </div></td>
       <td><span class="badge badge-amber">${esc(m.kategori||'—')}</span></td>
       <td><span style="font-family:'Sora',sans-serif;font-weight:700;color:var(--amber)">${fmt(m.harga)}</span></td>
       <td><span style="color:var(--muted);font-size:.82rem">${fmt(m.hpp||0)}</span></td>
       <td><span class="badge ${+mg>=40?'badge-green':+mg>=20?'badge-amber':'badge-red'}">${mg}%</span></td>
       <td><span class="badge ${m.status==='aktif'?'badge-green':'badge-red'}">${m.status==='aktif'?'Aktif':'Non-aktif'}</span></td>
-      <td><div style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openMenuModal('${m.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteMenu('${m.id}')">Hapus</button></div></td>
+      <td><div style="display:flex;gap:5px">
+        <button class="btn btn-sm btn-ghost" onclick="openMenuModal('${m.id}')">Edit</button>
+        <button class="btn btn-sm btn-red" onclick="deleteMenu('${m.id}')">Hapus</button>
+      </div></td>
     </tr>`;
-  }).join('')||`<tr><td colspan="7"><div class="empty"><span class="empty-ico">🍽️</span><div class="empty-title">Belum ada menu</div><p>Tambah item pertama kamu</p></div></td></tr>`;
+  }).join('')||(S.menu.length?`<tr><td colspan="7"><div class="empty"><span class="empty-ico">🔍</span><div class="empty-title">Tidak ditemukan</div><p style="font-size:.79rem">Coba ubah filter pencarian</p></div></td></tr>`:`<tr><td colspan="7"><div class="empty"><span class="empty-ico">🍽️</span><div class="empty-title">Belum ada menu</div><p style="font-size:.79rem">Klik tombol <strong>+ Tambah Menu</strong> untuk mulai</p></div></td></tr>`);
 }
 
 function openMenuModal(id) {
@@ -2318,22 +2404,34 @@ async function deleteMenu(id) {
 // ================================================================
 function renderStokPage() {
   const kritis=S.bahan.filter(b=>b.stok<=b.min_stok);
-  document.getElementById('stok-alerts').innerHTML=kritis.length?`<div class="alert-amber">⚠️ Stok kritis: ${kritis.map(b=>b.nama).join(', ')}</div>`:'';
+  const habis=kritis.filter(b=>b.stok<=0);
+  let alertHtml='';
+  if(habis.length) alertHtml+=`<div class="alert-red">🚨 <strong>Habis:</strong> ${habis.map(b=>b.nama).join(', ')}</div>`;
+  if(kritis.length-habis.length>0) alertHtml+=`<div class="alert-amber">⚠️ Stok kritis: ${kritis.filter(b=>b.stok>0).map(b=>`${b.nama} (${b.stok} ${b.satuan})`).join(', ')}</div>`;
+  document.getElementById('stok-alerts').innerHTML=alertHtml;
   document.getElementById('stok-tbl').innerHTML=S.bahan.map(b=>{
-    const pct=b.min_stok?(b.stok/b.min_stok*100):100;
-    const st=pct<=0?'badge-red':pct<=100?'badge-amber':'badge-green';
-    const stxt=pct<=0?'Habis':pct<=100?'Kritis':'Aman';
-    const stokColor=pct<=0?'var(--red)':pct<=100?'var(--amber)':'var(--text)';
+    const pct=b.min_stok?Math.min(b.stok/b.min_stok*100,200):100;
+    const st=b.stok<=0?'badge-red':pct<=100?'badge-amber':'badge-green';
+    const stxt=b.stok<=0?'Habis':pct<=100?'Kritis':'Aman';
+    const stokColor=b.stok<=0?'var(--red)':pct<=100?'var(--amber)':'var(--text)';
+    const barColor=b.stok<=0?'var(--red)':pct<=100?'var(--amber)':'var(--green)';
+    const barPct=Math.min(Math.max(pct/2,0),100); // scale 200% max to 100% bar
     return `<tr>
       <td><div style="font-weight:600;font-size:.84rem">${esc(b.nama)}</div></td>
       <td><span class="badge badge-blue" style="font-size:.62rem">${esc(b.satuan)}</span></td>
-      <td><span style="font-family:'Sora',sans-serif;font-weight:700;color:${stokColor}">${b.stok.toLocaleString('id-ID')}</span></td>
+      <td>
+        <span style="font-family:'Sora',sans-serif;font-weight:700;color:${stokColor}">${b.stok.toLocaleString('id-ID')}</span>
+        <div class="stok-bar-wrap"><div class="stok-bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
+      </td>
       <td><span style="color:var(--muted);font-size:.82rem">${b.min_stok}</span></td>
       <td><span style="color:var(--muted);font-size:.82rem">${fmt(b.harga_satuan||0)}/${esc(b.satuan)}</span></td>
       <td><span class="badge ${st}">${stxt}</span></td>
-      <td><div style="display:flex;gap:5px"><button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button></div></td>
+      <td><div style="display:flex;gap:5px">
+        <button class="btn btn-sm btn-ghost" onclick="openStokModal('${b.id}')">Edit</button>
+        <button class="btn btn-sm btn-red" onclick="deleteBahan('${b.id}')">Hapus</button>
+      </div></td>
     </tr>`;
-  }).join('')||`<tr><td colspan="7"><div class="empty"><span class="empty-ico">📦</span><div class="empty-title">Belum ada bahan</div><p>Tambah bahan baku pertama</p></div></td></tr>`;
+  }).join('')||`<tr><td colspan="7"><div class="empty"><span class="empty-ico">📦</span><div class="empty-title">Belum ada bahan</div><p style="font-size:.79rem">Klik <strong>+ Tambah Bahan</strong> untuk mulai</p></div></td></tr>`;
   renderStokLog();
 }
 
@@ -2411,19 +2509,20 @@ function renderResepPage() {
   const aktif=S.menu.filter(m=>m.status==='aktif');
   document.getElementById('resep-list').innerHTML=aktif.map(m=>{
     const ings=S.resep.filter(r=>r.menu_id===m.id);
-    const ingText=ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?`<span class="badge badge-blue" style="font-size:.62rem;margin-right:3px">${esc(b.nama)} ${r.qty}${esc(b.satuan)}</span>`:'';}).join('');
+    const ingText=ings.map(r=>{const b=S.bahan.find(x=>x.id===r.bahan_id);return b?`<span class="badge badge-blue" style="font-size:.62rem;margin:2px 3px 2px 0;display:inline-block">${esc(b.nama)} <strong>${r.qty}${esc(b.satuan)}</strong></span>`:'';}).join('');
     const hasResep=ings.length>0;
-    return `<div class="card" style="margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:42px;height:42px;border-radius:12px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">${esc(m.icon||'🍽️')}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:.88rem;margin-bottom:5px">${esc(m.nama)}</div>
-          <div>${hasResep?ingText:`<span style="font-size:.73rem;color:var(--muted)">Belum ada resep — stok tidak akan dikurangi</span>`}</div>
+    return `<div class="resep-card">
+      <div class="resep-card-ico">${esc(m.icon||'🍽️')}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:.87rem;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+          ${esc(m.nama)}
+          ${hasResep?`<span class="badge badge-green" style="font-size:.58rem">${ings.length} bahan</span>`:`<span class="badge badge-muted" style="font-size:.58rem;background:rgba(255,255,255,.04);color:var(--muted);border-color:var(--border)">Belum ada resep</span>`}
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="openResepModal('${m.id}')">${hasResep?'Edit':'+ Resep'}</button>
+        <div style="line-height:1.6">${hasResep?ingText:`<span style="font-size:.73rem;color:var(--muted)">Stok tidak akan berkurang saat transaksi</span>`}</div>
       </div>
+      <button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="openResepModal('${m.id}')">${hasResep?'✏️ Edit':'+ Resep'}</button>
     </div>`;
-  }).join('')||`<div class="empty"><span class="empty-ico">📋</span><div class="empty-title">Tidak ada menu aktif</div><p>Aktifkan menu di halaman Kelola Menu</p></div>`;
+  }).join('')||`<div class="empty"><span class="empty-ico">📋</span><div class="empty-title">Tidak ada menu aktif</div><p style="font-size:.79rem">Aktifkan menu di halaman Kelola Menu</p></div>`;
 }
 
 function openResepModal(menuId) {
