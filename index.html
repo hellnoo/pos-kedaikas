@@ -733,13 +733,7 @@ table.tbl tbody tr:hover td{background:rgba(245,158,11,.04)!important;transition
           </div>
           <div class="cash-wrap" id="cash-wrap">
             <input class="fi" type="number" id="cash-in" placeholder="Uang diterima" oninput="calcChange()">
-            <div class="quick-btns" id="quick-cash-btns">
-              <button class="qb" onclick="setQuickCash('pas')">Uang Pas</button>
-              <button class="qb" onclick="setQuickCash(50000)">50k</button>
-              <button class="qb" onclick="setQuickCash(100000)">100k</button>
-              <button class="qb" onclick="setQuickCash(150000)">150k</button>
-              <button class="qb" onclick="setQuickCash(200000)">200k</button>
-            </div>
+            <div class="quick-btns" id="quick-cash-btns"></div>
             <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-top:4px;color:var(--muted)">
               <span>Kembalian</span><span id="change-disp" style="color:var(--green);font-weight:700">Rp 0</span>
             </div>
@@ -1674,7 +1668,10 @@ function renderCart() {
   const body=document.getElementById('cart-body');
   if(!S.cart.length) { body.innerHTML='<div class="empty"><div class="empty-ico">🛒</div><p style="font-size:.78rem">Belum ada item</p></div>'; }
   else { body.innerHTML=S.cart.map(i=>`<div class="ci">
-    <div style="flex:1"><div class="ci-name">${esc(i.nama)}</div><div class="ci-p">${fmt(i.harga)} × ${i.qty}</div></div>
+    <div style="flex:1">
+      <div class="ci-name">${esc(i.nama)}</div>
+      <div class="ci-p">${fmt(i.harga)} × ${i.qty} <span style="margin-left:4px;color:var(--amber);font-weight:700">${fmt(i.harga*i.qty)}</span></div>
+    </div>
     <div class="ci-qty">
       <button class="ci-qb" onclick="removeFromCart('${i.menuId}')">−</button>
       <span class="ci-qn">${i.qty}</span>
@@ -2050,6 +2047,18 @@ function calcChange() {
   document.getElementById('change-disp').textContent=chg>=0?fmt(chg):'—';
   document.getElementById('change-disp').style.color=chg>=0?'var(--green)':'var(--red)';
   document.getElementById('co-btn').disabled=!S.cart.length||(S.payMethod==='cash'&&cash<tot);
+  // Render dynamic quick-cash buttons
+  const qcEl=document.getElementById('quick-cash-btns');
+  if(qcEl && tot>0) {
+    const rnd=(v,d)=>Math.ceil(v/d)*d;
+    const opts=[tot]; // "Uang Pas"
+    const steps=[1000,2000,5000,10000,20000,50000,100000];
+    for(const s of steps){const v=rnd(tot,s);if(v!==tot&&v-tot<=200000)opts.push(v);}
+    const uniq=[...new Set(opts)].sort((a,b)=>a-b).slice(0,5);
+    qcEl.innerHTML=uniq.map(v=>`<button class="qb" onclick="setQuickCash(${v})">${v===tot?'Uang Pas':v>=1000?(v/1000%1===0?v/1000+'k':fmt(v)):fmt(v)}</button>`).join('');
+  } else if(qcEl) {
+    qcEl.innerHTML='<button class="qb" onclick="setQuickCash(\'pas\')">Uang Pas</button>';
+  }
 }
 
 async function processCheckout(fromQRISConfirm=false) {
@@ -2110,7 +2119,9 @@ async function processCheckout(fromQRISConfirm=false) {
     const qrisConfirm = document.getElementById('qris-confirm-btn');
     if (qrisPulse) qrisPulse.style.display='none';
     if (qrisConfirm) qrisConfirm.style.display='none';
+    setPayMethod('cash');
     renderCart(); renderPOS();
+    updateNavBadges();
     // Notif pembayaran masuk
     showNotifPayment(tot, S.currentUser.nama, S.payMethod);
     toast('✅ Transaksi berhasil!','success');
